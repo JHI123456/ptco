@@ -1,0 +1,397 @@
+/* ==========================================================================
+   VISITOR REPORT VIEW STYLES
+   ========================================================================== */
+
+.visitor-report-container {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  width: 100%;
+}
+
+/* --------------------------------------------------------------------------
+   KPI Metric Cards
+   -------------------------------------------------------------------------- */
+.visitor-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+}
+
+.visitor-kpi-card {
+  border-radius: 12px;
+  padding: 20px 18px 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.visitor-kpi-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+}
+
+.serif-label {
+  font-family: "Playfair Display", Georgia, "Times New Roman", serif;
+  font-style: italic;
+}
+
+.kpi-label {
+  font-size: 14.5px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  letter-spacing: 0.2px;
+}
+
+.kpi-number {
+  font-size: 38px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.5px;
+}
+
+/* Specific Card Themes */
+.mint-card {
+  background-color: #d1fae5;
+  border: 1px solid #a7f3d0;
+  color: #064e3b;
+}
+
+.mint-card .kpi-number {
+  color: #064e3b;
+}
+
+.lavender-card {
+  background-color: #ede9fe;
+  border: 1px solid #ddd6fe;
+  color: #3730a3;
+}
+
+.lavender-card .kpi-number {
+  color: #312e81;
+}
+
+.gold-card {
+  background-color: #fbc02d;
+  border: 1px solid #f59e0b;
+  color: #1e293b;
+}
+
+.gold-card .kpi-number {
+  color: #1e293b;
+}
+
+.emerald-card {
+  background-color: #0f766e;
+  border: 1px solid #115e59;
+  color: #ffffff;
+}
+
+.emerald-card .kpi-label,
+.emerald-card .kpi-number {
+  color: #ffffff;
+}
+
+/* --------------------------------------------------------------------------
+   Filter Controls Panel
+   -------------------------------------------------------------------------- */
+.visitor-filter-panel {
+  background-color: #ffffff;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  padding: 16px 22px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+}
+
+.filter-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.filter-label {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #64748b;
+  text-transform: lowercase;
+  letter-spacing: 0.3px;
+  user-select: none;
+}
+
+.filter-select-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+.filter-select {
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 8px 32px 8px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1e293b;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.filter-select:hover {
+  border-color: #cbd5e1;
+}
+
+.filter-select:focus {
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15);
+}
+
+.select-chevron {
+  position: absolute;
+  right: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: #94a3b8;
+}
+
+/* --------------------------------------------------------------------------
+   Monthly Tourist Volume Chart Card
+   -------------------------------------------------------------------------- */
+.visitor-chart-card {
+  background-color: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 28px 32px 30px;
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.chart-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.chart-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.chart-main-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.2px;
+  margin: 0;
+}
+
+.chart-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+}
+
+.chart-legend {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #475569;
+}
+
+.legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.dot-domestic {
+  background-color: #10b981;
+}
+
+.dot-overnight {
+  background-color: #3b82f6;
+}
+
+.dot-foreign {
+  background-color: #f59e0b;
+}
+
+/* SVG Chart Area */
+.chart-svg-wrapper {
+  position: relative;
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.grouped-bar-svg {
+  width: 100%;
+  min-width: 680px;
+  height: auto;
+  display: block;
+}
+
+.chart-grid-line {
+  stroke: #f1f5f9;
+  stroke-dasharray: 4 4;
+  stroke-width: 1.2;
+}
+
+.chart-base-line {
+  stroke: #334155;
+  stroke-width: 1.5;
+}
+
+.y-axis-label {
+  fill: #94a3b8;
+  font-size: 11px;
+  font-weight: 500;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.x-axis-label {
+  fill: #334155;
+  font-size: 11.5px;
+  font-weight: 600;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.bar {
+  cursor: pointer;
+  transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.bar:hover {
+  opacity: 0.8;
+}
+
+.bar-domestic {
+  fill: #10b981;
+}
+
+.bar-overnight {
+  fill: #3b82f6;
+}
+
+.bar-foreign {
+  fill: #f59e0b;
+}
+
+/* Tooltip */
+.chart-tooltip {
+  position: absolute;
+  transform: translate(-50%, -120%);
+  background-color: #1e293b;
+  color: #ffffff;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  pointer-events: none;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.chart-tooltip::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: #1e293b transparent transparent transparent;
+}
+
+.tooltip-title {
+  font-size: 11px;
+  color: #94a3b8;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.tooltip-detail {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tooltip-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+.tooltip-label {
+  color: #e2e8f0;
+}
+
+.tooltip-value {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive Media Queries
+   -------------------------------------------------------------------------- */
+@media (max-width: 1100px) {
+  .visitor-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .visitor-filter-panel {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .visitor-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .visitor-filter-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .chart-header-row {
+    flex-direction: column;
+  }
+
+  .chart-legend {
+    align-self: flex-start;
+  }
+
+  .visitor-chart-card {
+    padding: 20px 18px 24px;
+  }
+}
