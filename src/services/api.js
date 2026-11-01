@@ -17,7 +17,7 @@ export async function fetchLGUs(params = {}) {
     if (params.sort) query.append("sort", params.sort);
 
     const res = await fetch(`${API_BASE_URL}/lgus?${query.toString()}`, {
-      signal: AbortSignal.timeout(4000),
+      signal: AbortSignal.timeout(15000),
     });
 
     if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
@@ -43,7 +43,7 @@ export async function fetchEstablishments(params = {}) {
     if (params.sort) query.append("sort", params.sort);
 
     const res = await fetch(`${API_BASE_URL}/establishments?${query.toString()}`, {
-      signal: AbortSignal.timeout(4000),
+      signal: AbortSignal.timeout(15000),
     });
 
     if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
@@ -62,7 +62,7 @@ export async function fetchEstablishments(params = {}) {
 export async function fetchUsers(_params = {}) {
   try {
     const res = await fetch(`${API_BASE_URL}/users`, {
-      signal: AbortSignal.timeout(4000),
+      signal: AbortSignal.timeout(15000),
     });
 
     if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
@@ -84,7 +84,7 @@ export async function fetchVisitorAnalytics(params = {}) {
     if (params.year) query.append("year", params.year);
 
     const res = await fetch(`${API_BASE_URL}/reports/visitor-analytics?${query.toString()}`, {
-      signal: AbortSignal.timeout(4000),
+      signal: AbortSignal.timeout(15000),
     });
 
     if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
