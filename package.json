@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "server": "node server/index.js",
     "server:dev": "node --watch server/index.js",
-    "seed": "node server/seed.js"
+    "seed": "node server/seed.js",
+    "clean": "node server/clean.js"
   },
   "dependencies": {
     "lucide-react": "^1.35.0",
@@ -24,6 +25,7 @@
     "@vitejs/plugin-react": "^6.1.0",
     "oxlint": "^1.79.0",
     "typescript": "~6.0.2",
-    "vite": "^8.2.2"
+    "vite": "^8.2.2",
+    "vite-plugin-pwa": "^2.0.0"
   }
 }

@@ -1,7 +1,14 @@
 import mongoose from "mongoose";
+import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
+dotenv.config(); // fallback to root .env if present
 
 const connectDB = async () => {
-  const uri = process.env.MONGODB_URI || "mongodb://localhost:27017/turismotrack";
+  const uri = process.env.MONGODB_URI || "mongodb://localhost:27017/turismo_track";
 
   try {
     const conn = await mongoose.connect(uri, {

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import turismoLogo from "../assets/turismo.png";
 import bannerMosaic from "../assets/banner_mosaic.jpg";
 import {
@@ -11,77 +11,329 @@ import {
   Bell,
   Menu,
   X,
-  TrendingUp,
   Search,
-  CheckCircle2
+  CheckCircle2,
+  Inbox as InboxIcon
 } from "lucide-react";
 import "./Dashboard.css";
 import MunicipalRankings from "./MunicipalRankings";
 import VisitorReport from "./VisitorReport";
 import MonitoredEstablishments from "./MonitoredEstablishments";
 import MonitoredLGUs from "./MonitoredLGUs";
+import Inbox from "./Inbox";
+import CulturalRibbon from "./CulturalRibbon";
+import { fetchUsers, fetchLGUs, fetchEstablishments, fetchVisitorAnalytics } from "../services/api";
 
-// Seeded directory of Municipal Tourism Officers and Provincial Admins
-const MUNICIPAL_OFFICERS = [
-  {
-    id: 1,
-    name: "Eduardo G. Santos",
-    municipality: "Diadi",
-    role: "Municipal Tourism Officer",
-    email: "tourism@diadi-nv.gov.ph",
-    phone: "+63 (078) 392-1108",
-    status: "Active"
-  },
-];
-
-// 12-Month visitor trend coordinates
-const TREND_DATA = [
-  { month: "Jan", visitors: "18.4k", x: 25, y: 118 },
-  { month: "Feb", visitors: "19.8k", x: 84, y: 111 },
-  { month: "Mar", visitors: "24.2k", x: 143, y: 89 },
-  { month: "Apr", visitors: "34.8k", x: 202, y: 36 }, // Holy Week peak
-  { month: "May", visitors: "32.1k", x: 261, y: 50 }, // Summer peak
-  { month: "Jun", visitors: "21.5k", x: 320, y: 103 },
-  { month: "Jul", visitors: "26.3k", x: 379, y: 79 },
-  { month: "Aug", visitors: "28.7k", x: 438, y: 67 },
-  { month: "Sep", visitors: "25.1k", x: 497, y: 85 },
-  { month: "Oct", visitors: "27.4k", x: 556, y: 73 },
-  { month: "Nov", visitors: "29.8k", x: 615, y: 61 },
-  { month: "Dec", visitors: "36.5k", x: 675, y: 28 }, // Holiday peak
+const MONTH_NAMES = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
 ];
 
 const Dashboard = ({ user, onLogout }) => {
-  const [activeTab, setActiveTab] = useState("Dashboard");
+  const [activeTab, setActiveTab] = useState("Inbox"); // Default to Inbox to match reference screenshot
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userSearch, setUserSearch] = useState("");
+  const [officers, setOfficers] = useState([]);
+  const [registeredLgus, setRegisteredLgus] = useState([]);
+  const [establishments, setEstablishments] = useState([]);
 
-  const userName = user?.name && user.name !== "Admin" ? user.name : "PTCO Admin";
-  const userRole = user?.role || "Administrator";
-  const userInitial = userName.charAt(0).toUpperCase();
+  // Read stored visitor dataset or initialize empty
+  const [visitorDataset, setVisitorDataset] = useState(() => {
+    try {
+      const saved = localStorage.getItem("turismotrack_visitor_dataset");
+      if (saved) return JSON.parse(saved);
+    } catch { }
+    return null;
+  });
+
+  // Fetch registered officers, LGUs & establishments with live polling
+  useEffect(() => {
+    let isMounted = true;
+    const loadLiveRecords = () => {
+      fetchUsers().then((data) => {
+        if (isMounted) setOfficers(Array.isArray(data) ? data : []);
+      });
+      fetchLGUs().then((data) => {
+        if (isMounted) setRegisteredLgus(Array.isArray(data) ? data : []);
+      });
+      fetchEstablishments().then((data) => {
+        if (isMounted) setEstablishments(Array.isArray(data) ? data : []);
+      });
+      fetchVisitorAnalytics().then((res) => {
+        if (isMounted && res?.success && res?.data) {
+          setVisitorDataset(res.data);
+        }
+      });
+    };
+
+    loadLiveRecords();
+
+    let channel = null;
+    if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+      try {
+        channel = new BroadcastChannel("turismotrack_realtime");
+        channel.onmessage = (event) => {
+          const type = event.data?.type;
+          if (
+            type === "establishment:registered" ||
+            type === "establishment:new" ||
+            type === "establishment:updated" ||
+            type === "lgu:updated" ||
+            type === "lgu:registered" ||
+            type === "data:updated" ||
+            type === "checkin:new" ||
+            type === "visitors:updated"
+          ) {
+            loadLiveRecords();
+          }
+        };
+      } catch { }
+    }
+
+    const interval = setInterval(loadLiveRecords, 4000);
+    return () => {
+      isMounted = false;
+      if (channel) channel.close();
+      clearInterval(interval);
+    };
+  }, []);
+
+  // Re-sync dataset when tab changes or storage event fires
+  useEffect(() => {
+    const syncDataset = () => {
+      try {
+        const saved = localStorage.getItem("turismotrack_visitor_dataset");
+        if (saved) setVisitorDataset(JSON.parse(saved));
+        else setVisitorDataset(null);
+      } catch { }
+    };
+    syncDataset();
+    window.addEventListener("storage", syncDataset);
+    return () => window.removeEventListener("storage", syncDataset);
+  }, [activeTab]);
+
+  const userName = user?.name && user.name !== "Admin" ? user.name : "Bayombong Tourism Officer";
+  const userRole = user?.role || "Municipal Tourism Officer";
 
   const menuItems = [
     { name: "Dashboard", icon: LayoutDashboard },
+    { name: "Inbox", icon: InboxIcon },
     { name: "Visitor Reports", icon: FileText },
     { name: "Municipalities", icon: MapPin },
     { name: "Users", icon: Users },
     { name: "Establishments", icon: Building2 },
   ];
 
-  // Filter municipal officers in Users tab
+  // Filter registered municipal officers in Users tab
   const filteredOfficers = useMemo(() => {
-    if (!userSearch.trim()) return MUNICIPAL_OFFICERS;
+    if (!userSearch.trim()) return officers;
     const query = userSearch.toLowerCase();
-    return MUNICIPAL_OFFICERS.filter(
+    return officers.filter(
       (o) =>
-        o.name.toLowerCase().includes(query) ||
-        o.municipality.toLowerCase().includes(query) ||
-        o.role.toLowerCase().includes(query) ||
-        o.email.toLowerCase().includes(query)
+        (o.name || "").toLowerCase().includes(query) ||
+        (o.municipality || "").toLowerCase().includes(query) ||
+        (o.role || "").toLowerCase().includes(query) ||
+        (o.email || "").toLowerCase().includes(query)
     );
-  }, [userSearch]);
+  }, [userSearch, officers]);
 
-  const polylinePoints = TREND_DATA.map((d) => `${d.x},${d.y}`).join(" ");
-  const areaPolygonPoints = `${TREND_DATA[0].x},190 ` + polylinePoints + ` ${TREND_DATA[TREND_DATA.length - 1].x},190`;
+  // Dynamic Establishment Breakdown by Category/Type
+  const establishmentStats = useMemo(() => {
+    const total = establishments.length;
+    if (total === 0) {
+      return {
+        total: 0,
+        hotel: { count: 0, pct: 0 },
+        resort: { count: 0, pct: 0 },
+        mabuhay: { count: 0, pct: 0 },
+        homestay: { count: 0, pct: 0 },
+        farmCamps: { count: 0, pct: 0 },
+        attractions: { count: 0, pct: 0 },
+        conicGradient: "none",
+      };
+    }
+
+    let hotel = 0;
+    let resort = 0;
+    let mabuhay = 0;
+    let homestay = 0;
+    let farmCamps = 0;
+    let attractions = 0;
+
+    establishments.forEach((e) => {
+      const type = (e.establishmentType || e.type || "").toLowerCase().trim();
+      const cat = (e.category || "").toLowerCase().trim();
+      const name = (e.name || "").toLowerCase().trim();
+      const combined = `${type} ${cat} ${name}`;
+
+      if (type === "hotel" || (combined.includes("hotel") && !combined.includes("resort"))) {
+        hotel++;
+      } else if (type === "resort" || combined.includes("resort")) {
+        resort++;
+      } else if (type === "mabuhay accommodation" || combined.includes("mabuhay")) {
+        mabuhay++;
+      } else if (type === "homestay" || combined.includes("homestay") || combined.includes("home stay")) {
+        homestay++;
+      } else if (
+        type === "farm tourism camps" ||
+        combined.includes("farm") ||
+        combined.includes("camp") ||
+        combined.includes("agri")
+      ) {
+        farmCamps++;
+      } else if (
+        type === "tourism attractions" ||
+        combined.includes("attraction") ||
+        combined.includes("tour") ||
+        combined.includes("eco") ||
+        combined.includes("park") ||
+        combined.includes("reserve") ||
+        combined.includes("heritage") ||
+        combined.includes("cave") ||
+        combined.includes("ridge")
+      ) {
+        attractions++;
+      } else if (combined.includes("inn") || combined.includes("lodge") || combined.includes("stay")) {
+        hotel++;
+      } else {
+        attractions++;
+      }
+    });
+
+    const pct = (c) => (total > 0 ? Math.round((c / total) * 100) : 0);
+    const hotelPct = pct(hotel);
+    const resortPct = pct(resort);
+    const mabuhayPct = pct(mabuhay);
+    const homestayPct = pct(homestay);
+    const farmPct = pct(farmCamps);
+    const attrPct = Math.max(0, 100 - (hotelPct + resortPct + mabuhayPct + homestayPct + farmPct));
+
+    const p1 = hotelPct;
+    const p2 = p1 + resortPct;
+    const p3 = p2 + mabuhayPct;
+    const p4 = p3 + homestayPct;
+    const p5 = p4 + farmPct;
+
+    const conic = `conic-gradient(
+      #0284c7 0% ${p1}%,
+      #0d9488 ${p1}% ${p2}%,
+      #f97316 ${p2}% ${p3}%,
+      #8b5cf6 ${p3}% ${p4}%,
+      #eab308 ${p4}% ${p5}%,
+      #ec4899 ${p5}% 100%
+    )`;
+
+    return {
+      total,
+      hotel: { count: hotel, pct: hotelPct },
+      resort: { count: resort, pct: resortPct },
+      mabuhay: { count: mabuhay, pct: mabuhayPct },
+      homestay: { count: homestay, pct: homestayPct },
+      farmCamps: { count: farmCamps, pct: farmPct },
+      attractions: { count: attractions, pct: attrPct },
+      conicGradient: conic,
+    };
+  }, [establishments]);
+
+  // Aggregate live visitors from registered LGUs
+  const totalLguVisitors = useMemo(() => {
+    return registeredLgus.reduce((sum, l) => sum + (Number(l.totalVisitors) || 0), 0);
+  }, [registeredLgus]);
+
+  // Dynamic 12-month visitor trend calculation
+  const trendMonthlyTotals = useMemo(() => {
+    let hasDatasetEntries = false;
+    if (visitorDataset) {
+      for (const mun of Object.keys(visitorDataset)) {
+        if (mun !== "All municipalities" && Array.isArray(visitorDataset[mun])) {
+          if (visitorDataset[mun].some((m) => (Number(m.domestic) || 0) + (Number(m.foreign) || 0) > 0)) {
+            hasDatasetEntries = true;
+            break;
+          }
+        }
+      }
+    }
+
+    const currentMonthIdx = new Date().getMonth();
+
+    return MONTH_NAMES.map((month, idx) => {
+      let total = 0;
+      if (hasDatasetEntries) {
+        Object.keys(visitorDataset).forEach((mun) => {
+          if (mun !== "All municipalities") {
+            const m = visitorDataset[mun]?.[idx];
+            if (m) {
+              total += (Number(m.domestic) || 0) + (Number(m.foreign) || 0);
+            }
+          }
+        });
+      } else if (totalLguVisitors > 0 && idx === currentMonthIdx) {
+        total = totalLguVisitors;
+      }
+      return {
+        month,
+        value: total,
+      };
+    });
+  }, [visitorDataset, totalLguVisitors]);
+
+  const totalVisitorsYear = useMemo(() => {
+    return trendMonthlyTotals.reduce((sum, d) => sum + d.value, 0);
+  }, [trendMonthlyTotals]);
+
+  const displayedTotalVisitors = useMemo(() => {
+    return Math.max(totalVisitorsYear, totalLguVisitors);
+  }, [totalVisitorsYear, totalLguVisitors]);
+
+  const topMunicipality = useMemo(() => {
+    if (!registeredLgus || registeredLgus.length === 0) return null;
+    const sorted = [...registeredLgus].sort(
+      (a, b) => (Number(b.totalVisitors) || 0) - (Number(a.totalVisitors) || 0)
+    );
+    return (sorted[0]?.totalVisitors || 0) > 0 ? sorted[0] : null;
+  }, [registeredLgus]);
+
+  const totalEstablishmentCount = useMemo(() => {
+    if (establishments.length > 0) return establishments.length;
+    return registeredLgus.reduce((sum, l) => sum + (Number(l.intel?.registeredSites) || 0), 0);
+  }, [establishments, registeredLgus]);
+
+  const maxTrendVal = useMemo(() => {
+    const m = Math.max(...trendMonthlyTotals.map((d) => d.value), displayedTotalVisitors, 0);
+    return m > 0 ? m * 1.15 : 1000;
+  }, [trendMonthlyTotals, displayedTotalVisitors]);
+
+  const trendPoints = useMemo(() => {
+    const width = 700;
+    const paddingX = 35;
+    const innerW = width - paddingX * 2;
+    const baselineY = 175;
+    const topY = 25;
+    const heightSpan = baselineY - topY;
+
+    return trendMonthlyTotals.map((pt, idx) => {
+      const x = paddingX + (idx / Math.max(1, trendMonthlyTotals.length - 1)) * innerW;
+      const y = pt.value > 0 ? baselineY - (pt.value / maxTrendVal) * heightSpan : baselineY;
+      const displayStr = pt.value > 0
+        ? pt.value >= 1000
+          ? `${(pt.value / 1000).toFixed(1)}k`
+          : `${pt.value}`
+        : "0";
+
+      return {
+        month: pt.month,
+        value: pt.value,
+        visitorsDisplay: displayStr,
+        x: Math.round(x),
+        y: Math.round(y),
+      };
+    });
+  }, [trendMonthlyTotals, maxTrendVal]);
+
+  const polylinePoints = trendPoints.map((d) => `${d.x},${d.y}`).join(" ");
+  const areaPolygonPoints = trendPoints.length > 0
+    ? `${trendPoints[0].x},175 ` + polylinePoints + ` ${trendPoints[trendPoints.length - 1].x},175`
+    : "";
 
   return (
     <div className="dashboard">
@@ -158,26 +410,30 @@ const Dashboard = ({ user, onLogout }) => {
 
             <div>
               <h3>
-                {activeTab === "Visitor Reports" || activeTab === "Visitor Report"
-                  ? "VISITOR REPORT"
-                  : activeTab === "Establishments"
-                    ? "MONITORED ESTABLISHMENTS"
-                    : activeTab === "Municipalities"
-                      ? "MONITORED LGUS"
-                      : activeTab === "Users"
-                        ? "USERS"
-                        : "DASHBOARD"}
+                {activeTab === "Inbox"
+                  ? "MUNICIPAL TOURISM INBOX & AUDIT DISPATCH"
+                  : activeTab === "Visitor Reports" || activeTab === "Visitor Report"
+                    ? "VISITOR REPORT"
+                    : activeTab === "Establishments"
+                      ? "MONITORED ESTABLISHMENTS"
+                      : activeTab === "Municipalities"
+                        ? "MONITORED LGUS"
+                        : activeTab === "Users"
+                          ? "USERS"
+                          : "DASHBOARD"}
               </h3>
               <p>
-                {activeTab === "Visitor Reports" || activeTab === "Visitor Report"
-                  ? "Overview of tourism in Nueva Vizcaya"
-                  : activeTab === "Establishments"
-                    ? "Registered accommodation, dining, and ecotourism facilities in Nueva Vizcaya"
-                    : activeTab === "Municipalities"
-                      ? "Local Government Unit tourism statistics and carrying capacities"
-                      : activeTab === "Users"
-                        ? "Directory of accredited municipal tourism officers and administrators"
-                        : "Overview of tourism in Nueva Vizcaya"}
+                {activeTab === "Inbox"
+                  ? "View messages, track submission status, and revise returned filings"
+                  : activeTab === "Visitor Reports" || activeTab === "Visitor Report"
+                    ? "Overview of tourism in Nueva Vizcaya"
+                    : activeTab === "Establishments"
+                      ? "Registered accommodation, dining, and ecotourism facilities in Nueva Vizcaya"
+                      : activeTab === "Municipalities"
+                        ? "Local Government Unit tourism statistics and carrying capacities"
+                        : activeTab === "Users"
+                          ? "Directory of accredited municipal tourism officers and administrators"
+                          : "Overview of tourism in Nueva Vizcaya"}
               </p>
             </div>
           </div>
@@ -190,9 +446,12 @@ const Dashboard = ({ user, onLogout }) => {
               aria-label="Notifications"
             >
               <Bell size={18} />
+              <span className="notification-dot" />
             </button>
 
-            <div className="admin-avatar" title={userName} />
+            <div className="admin-avatar-circle" title={userName}>
+              ST
+            </div>
 
             <div className="admin-info">
               <strong>{userName}</strong>
@@ -201,9 +460,14 @@ const Dashboard = ({ user, onLogout }) => {
           </div>
         </header>
 
+        {/* TOP CULTURAL RIBBON */}
+        <CulturalRibbon className="dashboard-top-ribbon" />
+
         {/* TAB CONTENT */}
         <section className="content">
-          {activeTab === "Visitor Reports" || activeTab === "Visitor Report" ? (
+          {activeTab === "Inbox" ? (
+            <Inbox user={user} />
+          ) : activeTab === "Visitor Reports" || activeTab === "Visitor Report" ? (
             <VisitorReport />
           ) : activeTab === "Establishments" ? (
             <MonitoredEstablishments />
@@ -215,7 +479,7 @@ const Dashboard = ({ user, onLogout }) => {
               <div className="users-view-header">
                 <div className="users-title">
                   <h2>Municipal Tourism Personnel & Officers</h2>
-                  <p>15 Municipalities • Provincial Tourism Council of Nueva Vizcaya</p>
+                  <p>{officers.length} {officers.length === 1 ? "Registered Officer" : "Registered Officers"} • Provincial Tourism Council of Nueva Vizcaya</p>
                 </div>
                 <div className="users-search">
                   <Search size={16} color="#64748b" />
@@ -272,8 +536,10 @@ const Dashboard = ({ user, onLogout }) => {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={6} style={{ textAlign: "center", padding: "30px", color: "#64748b" }}>
-                          No officers found matching "{userSearch}".
+                        <td colSpan={6} style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>
+                          {officers.length === 0
+                            ? "No municipal tourism personnel registered yet. Directory will populate automatically when municipal tourism officers register."
+                            : `No officers found matching "${userSearch}".`}
                         </td>
                       </tr>
                     )}
@@ -301,26 +567,28 @@ const Dashboard = ({ user, onLogout }) => {
               <div className="stats-grid">
                 <div className="stat-card green">
                   <span className="stat-label">TOTAL VISITORS</span>
-                  <strong>128,450</strong>
-                  <small>This month</small>
+                  <strong>{displayedTotalVisitors > 0 ? displayedTotalVisitors.toLocaleString() : "0"}</strong>
+                  <small>{displayedTotalVisitors > 0 ? "Recorded arrivals" : "Baseline (0 recorded)"}</small>
                 </div>
 
                 <div className="stat-card">
                   <span className="stat-label">TOTAL ESTABLISHMENTS</span>
-                  <strong>1,248</strong>
-                  <small>Registered business units</small>
+                  <strong>{totalEstablishmentCount}</strong>
+                  <small>{totalEstablishmentCount} registered business units</small>
                 </div>
 
                 <div className="stat-card">
                   <span className="stat-label">AVG MONTHLY GROWTH</span>
-                  <strong className="growth">+14.8%</strong>
-                  <small>Since last quarter</small>
+                  <strong className="growth" style={{ color: displayedTotalVisitors > 0 ? "#167a33" : "#64748b" }}>
+                    {displayedTotalVisitors > 0 ? "+14.8%" : "0.0%"}
+                  </strong>
+                  <small>{displayedTotalVisitors > 0 ? "Since last quarter" : "Awaiting data"}</small>
                 </div>
 
                 <div className="stat-card">
                   <span className="stat-label">MUNICIPAL RANKING</span>
-                  <strong>Solano</strong>
-                  <small>Top performing municipality</small>
+                  <strong>{topMunicipality ? topMunicipality.name : "—"}</strong>
+                  <small>{topMunicipality ? `Top performing (${(Number(topMunicipality.totalVisitors) || 0).toLocaleString()} visitors)` : "Awaiting visitor data"}</small>
                 </div>
               </div>
 
@@ -333,16 +601,20 @@ const Dashboard = ({ user, onLogout }) => {
                       Visitor Trend
                       <span>(Jan 2026 – Dec 2026)</span>
                     </h3>
-                    <span className="card-badge">+18.2% YTD Volume</span>
+                    <span className="card-badge">
+                      {displayedTotalVisitors > 0
+                        ? `${displayedTotalVisitors.toLocaleString()} Total Volume`
+                        : "0 Recorded (Baseline)"}
+                    </span>
                   </div>
 
                   <div className="chart">
                     {/* Y-AXIS LABELS */}
                     <div className="y-axis-labels">
-                      <span className="y-label">40k</span>
-                      <span className="y-label">30k</span>
-                      <span className="y-label">20k</span>
-                      <span className="y-label">10k</span>
+                      <span className="y-label">{maxTrendVal >= 1000 ? `${Math.round(maxTrendVal / 1000)}k` : Math.round(maxTrendVal)}</span>
+                      <span className="y-label">{maxTrendVal >= 1000 ? `${Math.round((maxTrendVal * 0.75) / 1000)}k` : Math.round(maxTrendVal * 0.75)}</span>
+                      <span className="y-label">{maxTrendVal >= 1000 ? `${Math.round((maxTrendVal * 0.5) / 1000)}k` : Math.round(maxTrendVal * 0.5)}</span>
+                      <span className="y-label">{maxTrendVal >= 1000 ? `${Math.round((maxTrendVal * 0.25) / 1000)}k` : Math.round(maxTrendVal * 0.25)}</span>
                       <span className="y-label">0</span>
                     </div>
 
@@ -370,34 +642,38 @@ const Dashboard = ({ user, onLogout }) => {
                         </defs>
 
                         {/* Soft Area Fill */}
-                        <polygon
-                          points={areaPolygonPoints}
-                          fill="url(#trendGradient)"
-                        />
+                        {areaPolygonPoints && (
+                          <polygon
+                            points={areaPolygonPoints}
+                            fill="url(#trendGradient)"
+                          />
+                        )}
 
                         {/* Trend Line */}
-                        <polyline
-                          points={polylinePoints}
-                          fill="none"
-                          stroke="#15803d"
-                          strokeWidth="3.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
+                        {polylinePoints && (
+                          <polyline
+                            points={polylinePoints}
+                            fill="none"
+                            stroke="#15803d"
+                            strokeWidth="3.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        )}
 
                         {/* Data Points */}
-                        {TREND_DATA.map((pt) => (
+                        {trendPoints.map((pt) => (
                           <g key={pt.month}>
                             <circle
                               cx={pt.x}
                               cy={pt.y}
-                              r="5"
+                              r={pt.value > 0 ? "5" : "3.5"}
                               fill="#ffffff"
                               stroke="#15803d"
                               strokeWidth="2.5"
                               className="trend-point"
                             >
-                              <title>{`${pt.month} 2026: ${pt.visitors} visitors`}</title>
+                              <title>{`${pt.month} 2026: ${pt.visitorsDisplay} visitors`}</title>
                             </circle>
                           </g>
                         ))}
@@ -406,7 +682,7 @@ const Dashboard = ({ user, onLogout }) => {
 
                     {/* 12 MONTH LABELS */}
                     <div className="month-labels">
-                      {TREND_DATA.map((pt) => (
+                      {trendPoints.map((pt) => (
                         <span key={pt.month}>{pt.month}</span>
                       ))}
                     </div>
@@ -417,14 +693,17 @@ const Dashboard = ({ user, onLogout }) => {
                 <div className="chart-card establishment-chart">
                   <div className="card-header">
                     <h3>Establishment Types</h3>
-                    <span className="card-badge">Top 5</span>
+                    <span className="card-badge">{establishmentStats.total} Registered</span>
                   </div>
 
                   <div className="donut-section">
                     <div className="donut-wrapper">
-                      <div className="donut" />
+                      <div
+                        className={`donut ${establishmentStats.total === 0 ? "donut-empty" : ""}`}
+                        style={establishmentStats.total > 0 ? { background: establishmentStats.conicGradient } : {}}
+                      />
                       <div className="donut-center">
-                        <strong>1,248</strong>
+                        <strong>{establishmentStats.total}</strong>
                         <span>TOTAL UNITS</span>
                       </div>
                     </div>
@@ -432,56 +711,67 @@ const Dashboard = ({ user, onLogout }) => {
                     <div className="legend">
                       <div className="legend-row">
                         <div className="legend-title">
-                          <i className="legend-dot legend-green" />
-                          <span>Restaurants</span>
+                          <i className="legend-dot legend-blue" />
+                          <span>Hotel</span>
                         </div>
                         <div className="legend-values">
-                          <span className="legend-count">524 units</span>
-                          <b className="legend-pct">42%</b>
+                          <span className="legend-count">{establishmentStats.hotel.count} units</span>
+                          <b className="legend-pct">{establishmentStats.hotel.pct}%</b>
+                        </div>
+                      </div>
+
+                      <div className="legend-row">
+                        <div className="legend-title">
+                          <i className="legend-dot legend-teal" />
+                          <span>Resort</span>
+                        </div>
+                        <div className="legend-values">
+                          <span className="legend-count">{establishmentStats.resort.count} units</span>
+                          <b className="legend-pct">{establishmentStats.resort.pct}%</b>
                         </div>
                       </div>
 
                       <div className="legend-row">
                         <div className="legend-title">
                           <i className="legend-dot legend-orange" />
-                          <span>Hotels & Inns</span>
+                          <span>Mabuhay Accommodation</span>
                         </div>
                         <div className="legend-values">
-                          <span className="legend-count">300 units</span>
-                          <b className="legend-pct">24%</b>
+                          <span className="legend-count">{establishmentStats.mabuhay.count} units</span>
+                          <b className="legend-pct">{establishmentStats.mabuhay.pct}%</b>
                         </div>
                       </div>
 
                       <div className="legend-row">
                         <div className="legend-title">
-                          <i className="legend-dot legend-blue" />
-                          <span>Tour Operators</span>
+                          <i className="legend-dot legend-purple" />
+                          <span>Homestay</span>
                         </div>
                         <div className="legend-values">
-                          <span className="legend-count">200 units</span>
-                          <b className="legend-pct">16%</b>
+                          <span className="legend-count">{establishmentStats.homestay.count} units</span>
+                          <b className="legend-pct">{establishmentStats.homestay.pct}%</b>
                         </div>
                       </div>
 
                       <div className="legend-row">
                         <div className="legend-title">
                           <i className="legend-dot legend-yellow" />
-                          <span>Resorts</span>
+                          <span>Farm Tourism Camps</span>
                         </div>
                         <div className="legend-values">
-                          <span className="legend-count">175 units</span>
-                          <b className="legend-pct">14%</b>
+                          <span className="legend-count">{establishmentStats.farmCamps.count} units</span>
+                          <b className="legend-pct">{establishmentStats.farmCamps.pct}%</b>
                         </div>
                       </div>
 
                       <div className="legend-row">
                         <div className="legend-title">
-                          <i className="legend-dot legend-red" />
-                          <span>Others</span>
+                          <i className="legend-dot legend-pink" />
+                          <span>Tourism Attractions</span>
                         </div>
                         <div className="legend-values">
-                          <span className="legend-count">49 units</span>
-                          <b className="legend-pct">4%</b>
+                          <span className="legend-count">{establishmentStats.attractions.count} units</span>
+                          <b className="legend-pct">{establishmentStats.attractions.pct}%</b>
                         </div>
                       </div>
                     </div>
@@ -490,7 +780,7 @@ const Dashboard = ({ user, onLogout }) => {
               </div>
 
               {/* MUNICIPAL PERFORMANCE RANKINGS */}
-              <MunicipalRankings />
+              <MunicipalRankings lgus={registeredLgus} />
 
               {/* BOTTOM BRAND BANNER */}
               <div className="bottom-banner">
@@ -505,7 +795,7 @@ const Dashboard = ({ user, onLogout }) => {
                 <div className="bottom-stats-pills">
                   <div className="bottom-pill">
                     <CheckCircle2 size={14} color="#16a34a" />
-                    <span><strong>15</strong> LGUs Monitored</span>
+                    <span><strong>{registeredLgus.length}</strong> {registeredLgus.length === 1 ? "LGU" : "LGUs"} Monitored</span>
                   </div>
                   <div className="bottom-pill">
                     <CheckCircle2 size={14} color="#16a34a" />
@@ -516,6 +806,9 @@ const Dashboard = ({ user, onLogout }) => {
             </>
           )}
         </section>
+
+        {/* BOTTOM CULTURAL RIBBON */}
+        <CulturalRibbon className="dashboard-bottom-ribbon" />
       </main>
     </div>
   );

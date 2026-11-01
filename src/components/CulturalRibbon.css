@@ -1,0 +1,53 @@
+/* =========================================================
+   TurismoTrack — Cultural Tribal Ribbon Banner (Top & Bottom)
+   Cordillera & Nueva Vizcaya Heritage Decorative Motif
+   ========================================================= */
+
+.tt-cultural-ribbon {
+  display: flex;
+  height: 26px;
+  width: 100%;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.tt-ribbon-segment {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  position: relative;
+  transition: opacity 0.15s ease;
+}
+
+.tt-ribbon-segment:hover {
+  opacity: 0.92;
+}
+
+.tt-ribbon-icon {
+  font-size: 13px;
+  font-weight: 800;
+  opacity: 0.95;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+/* 11 Signature Cultural Segments Matching Screenshot */
+.tt-ribbon-seg-1  { background-color: #dc2626; } /* Crimson Red */
+.tt-ribbon-seg-2  { background-color: #f59e0b; } /* Amber Orange */
+.tt-ribbon-seg-3  { background-color: #15803d; } /* Forest Green */
+.tt-ribbon-seg-4  { background-color: #14532d; } /* Deep Dark Green */
+.tt-ribbon-seg-5  { background-color: #b91c1c; } /* Dark Red */
+.tt-ribbon-seg-6  { background-color: #ea580c; } /* Warm Orange */
+.tt-ribbon-seg-7  { background-color: #2563eb; } /* Royal Blue */
+.tt-ribbon-seg-8  { background-color: #16a34a; } /* Vibrant Emerald */
+.tt-ribbon-seg-9  { background-color: #eab308; } /* Bright Gold */
+.tt-ribbon-seg-10 { background-color: #f97316; } /* Tangerine */
+.tt-ribbon-seg-11 { background-color: #1d4ed8; } /* Cobalt Blue */

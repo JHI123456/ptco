@@ -235,26 +235,52 @@
   height: 36px;
   border-radius: 50%;
   background: #eaf5eb;
-  border: none;
+  border: 1px solid #dcfce7;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #167a33;
   cursor: pointer;
+  position: relative;
   transition: all 0.2s;
 }
 
 .notification:hover {
   background: #dcfce7;
+  transform: scale(1.05);
 }
 
-.admin-avatar {
-  width: 36px;
-  height: 36px;
+.notification-dot {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 7px;
+  height: 7px;
+  background-color: #16a34a;
   border-radius: 50%;
-  border: 1.5px solid #2e7d32;
-  background: #ffffff;
+  border: 1.5px solid #ffffff;
+}
+
+.admin-avatar-circle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1.5px solid #16a34a;
+  background-color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #166534;
+  font-weight: 700;
+  font-size: 13.5px;
+  cursor: pointer;
+  transition: all 0.2s;
   flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.admin-avatar-circle:hover {
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.2);
 }
 
 .admin-info {
@@ -272,6 +298,16 @@
 .admin-info span {
   font-size: 11.5px;
   color: #6b7280;
+}
+
+/* TOP & BOTTOM CULTURAL RIBBONS */
+.dashboard-top-ribbon {
+  width: 100%;
+}
+
+.dashboard-bottom-ribbon {
+  width: 100%;
+  margin-top: auto;
 }
 
 /* =================================
@@ -559,16 +595,22 @@
   height: 120px;
   border-radius: 50%;
   background: conic-gradient(
-    #16a34a 0% 42%,
-    #f97316 42% 66%,
-    #0284c7 66% 82%,
-    #eab308 82% 96%,
-    #ef4444 96% 100%
+    #0284c7 0% 25%,
+    #0d9488 25% 45%,
+    #f97316 45% 60%,
+    #8b5cf6 60% 72%,
+    #eab308 72% 85%,
+    #ec4899 85% 100%
   );
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.donut.donut-empty {
+  background: #e2e8f0;
+  box-shadow: none;
 }
 
 .donut::before {
@@ -609,15 +651,15 @@
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .legend-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 12.5px;
-  padding: 3px 6px;
+  font-size: 12px;
+  padding: 2.5px 6px;
   border-radius: 6px;
   transition: background 0.15s;
 }
@@ -646,6 +688,9 @@
 .legend-blue { background: #0284c7; }
 .legend-yellow { background: #eab308; }
 .legend-red { background: #ef4444; }
+.legend-teal { background: #0d9488; }
+.legend-purple { background: #8b5cf6; }
+.legend-pink { background: #ec4899; }
 
 .legend-values {
   display: flex;

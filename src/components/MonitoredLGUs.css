@@ -326,6 +326,23 @@
   color: #b45309;
 }
 
+.lgu-date-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.lgu-date-filter-select {
+  padding-left: 32px;
+}
+
+.lgu-filter-calendar-icon {
+  position: absolute;
+  left: 10px;
+  color: #64748b;
+  pointer-events: none;
+}
+
 .lgu-status-badge {
   display: inline-flex;
   align-items: center;
@@ -350,6 +367,112 @@
 
 .lgu-status-badge.optimal .status-dot {
   background-color: #16a34a;
+}
+
+/* Card Date Dropdown Badge (replaces Optimal) */
+.lgu-card-date-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background-color: #dcfce7;
+  border: 1px solid #bbf7d0;
+  border-radius: 9999px;
+  padding: 4px 22px 4px 8px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  max-width: 175px;
+}
+
+.lgu-card-date-wrap:hover {
+  background-color: #bbf7d0;
+  border-color: #86efac;
+  box-shadow: 0 2px 6px rgba(22, 163, 74, 0.16);
+}
+
+.lgu-card-date-wrap:focus-within {
+  background-color: #bbf7d0;
+  border-color: #16a34a;
+  box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.25);
+}
+
+.lgu-card-date-icon {
+  color: #15803d;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.lgu-card-date-select {
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  border: none;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #15803d;
+  cursor: pointer;
+  outline: none;
+  padding: 0;
+  font-family: inherit;
+  width: 100%;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.lgu-card-date-select option,
+.lgu-card-date-select optgroup {
+  background-color: #ffffff;
+  color: #0f172a;
+  font-weight: 500;
+}
+
+.lgu-card-date-chevron {
+  position: absolute;
+  right: 7px;
+  color: #15803d;
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+/* Custom Date Inline Input */
+.lgu-card-custom-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background-color: #ffffff;
+  border: 1.5px solid #16a34a;
+  border-radius: 9999px;
+  padding: 2px 8px;
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.15);
+}
+
+.lgu-custom-date-native {
+  border: none;
+  outline: none;
+  font-size: 11px;
+  font-weight: 700;
+  color: #15803d;
+  background: transparent;
+  font-family: inherit;
+  padding: 0;
+  cursor: pointer;
+}
+
+.lgu-custom-date-cancel {
+  border: none;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  border-radius: 50%;
+}
+
+.lgu-custom-date-cancel:hover {
+  background-color: #fee2e2;
+  color: #dc2626;
 }
 
 .lgu-card-headline {
@@ -794,4 +917,56 @@
   .modal-grid-stats {
     grid-template-columns: 1fr;
   }
+}
+
+/* Empty State */
+.lgu-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 60px 24px 68px;
+  background-color: #ffffff;
+  border-radius: 16px;
+  border: 1px dashed #cbd5e1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  width: 100%;
+}
+
+.lgu-empty-icon {
+  color: #94a3b8;
+  margin-bottom: 16px;
+}
+
+.lgu-empty-state h4 {
+  font-size: 17px;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0 0 8px 0;
+}
+
+.lgu-empty-state p {
+  font-size: 14px;
+  color: #64748b;
+  max-width: 500px;
+  line-height: 1.5;
+  margin: 0 0 18px 0;
+}
+
+.lgu-reset-btn {
+  background-color: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.lgu-reset-btn:hover {
+  background-color: #e2e8f0;
+  color: #0f172a;
 }

@@ -212,6 +212,16 @@
   letter-spacing: -0.1px;
 }
 
+.complaints-count.zero {
+  color: #64748b;
+  font-weight: 500;
+}
+
+.establishment-count.zero {
+  color: #64748b;
+  font-weight: 500;
+}
+  
 /* Trend */
 .trend-badge {
   display: inline-flex;
@@ -224,6 +234,10 @@
   letter-spacing: -0.1px;
 }
 
+.trend-badge.trend-zero {
+  color: #64748b;
+}
+
 .trend-icon {
   font-size: 13px;
   font-weight: 800;
@@ -234,9 +248,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* --------------------------------------------------------------------------
-   Responsive Media Queries
-   -------------------------------------------------------------------------- */
+
 @media (max-width: 900px) {
   .rankings-card {
     padding: 20px 20px 24px;
@@ -266,4 +278,38 @@
   .view-all-toggle-btn {
     align-self: flex-start;
   }
+}
+
+/* Empty State */
+.rankings-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 42px 20px 46px;
+  background-color: #f8fafc;
+  border-radius: 12px;
+  border: 1px dashed #cbd5e1;
+  margin-top: 6px;
+}
+
+.rankings-empty-icon {
+  color: #94a3b8;
+  margin-bottom: 12px;
+}
+
+.rankings-empty-state h4 {
+  font-size: 15.5px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 6px 0;
+}
+
+.rankings-empty-state p {
+  font-size: 13.5px;
+  color: #64748b;
+  max-width: 480px;
+  line-height: 1.5;
+  margin: 0;
 }

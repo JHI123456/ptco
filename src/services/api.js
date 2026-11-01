@@ -1,10 +1,10 @@
 // TurismoTrack API Client Service
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000/api";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
 
 /**
  * Fetch LGUs from MongoDB backend API
- * Returns null if server is unreachable so frontend can use fallback data
+ * Returns empty array if none registered or server is unreachable
  */
 export async function fetchLGUs(params = {}) {
   try {
@@ -14,21 +14,22 @@ export async function fetchLGUs(params = {}) {
     if (params.sort) query.append("sort", params.sort);
 
     const res = await fetch(`${API_BASE_URL}/lgus?${query.toString()}`, {
-      signal: AbortSignal.timeout(3000),
+      signal: AbortSignal.timeout(4000),
     });
 
     if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
-    const data = await res.json();
-    return Array.isArray(data) && data.length > 0 ? data : null;
-  } catch {
-    // Graceful fallback when backend / MongoDB is not active
-    return null;
+    const resData = await res.json();
+    const items = Array.isArray(resData) ? resData : (Array.isArray(resData?.data) ? resData.data : []);
+    return items;
+  } catch (err) {
+    console.warn("fetchLGUs error:", err.message);
+    return [];
   }
 }
 
 /**
  * Fetch Establishments from MongoDB backend API
- * Returns null if server is unreachable so frontend can use fallback data
+ * Returns empty array if none registered or server is unreachable
  */
 export async function fetchEstablishments(params = {}) {
   try {
@@ -39,14 +40,55 @@ export async function fetchEstablishments(params = {}) {
     if (params.sort) query.append("sort", params.sort);
 
     const res = await fetch(`${API_BASE_URL}/establishments?${query.toString()}`, {
-      signal: AbortSignal.timeout(3000),
+      signal: AbortSignal.timeout(4000),
     });
 
     if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
-    const data = await res.json();
-    return Array.isArray(data) && data.length > 0 ? data : null;
-  } catch {
-    // Graceful fallback when backend / MongoDB is not active
+    const resData = await res.json();
+    const items = Array.isArray(resData) ? resData : (Array.isArray(resData?.data) ? resData.data : []);
+    return items;
+  } catch (err) {
+    console.warn("fetchEstablishments error:", err.message);
+    return [];
+  }
+}
+
+/**
+ * Fetch Registered Municipal Tourism Personnel/Officers from backend
+ */
+export async function fetchUsers(_params = {}) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/users`, {
+      signal: AbortSignal.timeout(4000),
+    });
+
+    if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+    const resData = await res.json();
+    const items = Array.isArray(resData) ? resData : (Array.isArray(resData?.data) ? resData.data : []);
+    return items;
+  } catch (err) {
+    console.warn("fetchUsers error:", err.message);
+    return [];
+  }
+}
+
+/**
+ * Fetch dynamic Monthly Visitor Analytics aggregated across submissions & establishments
+ */
+export async function fetchVisitorAnalytics(params = {}) {
+  try {
+    const query = new URLSearchParams();
+    if (params.year) query.append("year", params.year);
+
+    const res = await fetch(`${API_BASE_URL}/reports/visitor-analytics?${query.toString()}`, {
+      signal: AbortSignal.timeout(4000),
+    });
+
+    if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
+    const resData = await res.json();
+    return resData;
+  } catch (err) {
+    console.warn("fetchVisitorAnalytics error:", err.message);
     return null;
   }
 }

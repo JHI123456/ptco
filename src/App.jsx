@@ -1,39 +1,54 @@
 import { useState, useEffect } from 'react'
 import Login from './components/Login'
 import Dashboard from './components/Dashboard'
+import PWAInstallPrompt from './components/PWAInstallPrompt'
 
 function App() {
+  // Restore logged-in provincial user session if available
   const [user, setUser] = useState(() => {
     try {
-      const saved = localStorage.getItem('turismotrack_user')
-      return saved ? JSON.parse(saved) : null
+      const stored = localStorage.getItem('turismotrack_user');
+      return stored ? JSON.parse(stored) : null;
     } catch {
-      return null
+      return null;
     }
-  })
+  });
 
   useEffect(() => {
     if (user) {
-      localStorage.setItem('turismotrack_user', JSON.stringify(user))
-      document.title = 'TurismoTrack — Provincial Tourism Office Dashboard'
+      try {
+        localStorage.setItem('turismotrack_user', JSON.stringify(user));
+      } catch (e) {}
+      document.title = 'TurismoTrack — Provincial Tourism Office Dashboard';
     } else {
-      localStorage.removeItem('turismotrack_user')
-      document.title = 'TurismoTrack — Sign In'
+      try {
+        localStorage.removeItem('turismotrack_user');
+      } catch (e) {}
+      document.title = 'TurismoTrack — Sign In';
     }
-  }, [user])
+  }, [user]);
 
   const handleLogin = (userData) => {
-    setUser(userData)
-  }
+    setUser(userData);
+  };
 
   const handleLogout = () => {
-    setUser(null)
-  }
+    setUser(null);
+    try {
+      localStorage.removeItem('turismotrack_user');
+      sessionStorage.removeItem('turismotrack_user');
+    } catch (e) {}
+  };
 
-  return user ? (
-    <Dashboard user={user} onLogout={handleLogout} />
-  ) : (
-    <Login onLogin={handleLogin} />
+  return (
+    <>
+      {user ? (
+        <Dashboard user={user} onLogout={handleLogout} />
+      ) : (
+        <Login onLogin={handleLogin} />
+      )}
+      <PWAInstallPrompt appName="TurismoTrack PTCO" />
+    </>
   )
 }
 
