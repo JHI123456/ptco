@@ -2,7 +2,12 @@ import mongoose from "mongoose";
 import crypto from "crypto";
 import dotenv from "dotenv";
 import path from "path";
+import dns from "dns";
 import { fileURLToPath } from "url";
+
+try {
+  dns.setServers(["8.8.8.8", "1.1.1.1", "8.8.4.4"]);
+} catch {}
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, ".env") });

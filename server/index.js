@@ -2,7 +2,16 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import path from "path";
+import dns from "dns";
 import { fileURLToPath } from "url";
+
+// Use public reliable DNS resolvers (Google / Cloudflare) to prevent SRV lookup ECONNREFUSED on local networks
+try {
+  dns.setServers(["8.8.8.8", "1.1.1.1", "8.8.4.4"]);
+} catch {
+  // Ignore fallback
+}
+
 import http from "http";
 import mongoose from "mongoose";
 import connectDB from "./config/db.js";
