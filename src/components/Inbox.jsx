@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { API_BASE_URL } from '../services/api';
 import {
   Search,
   Plus,
@@ -34,7 +35,7 @@ export default function Inbox({ user: _user }) {
   // Live API Inbox Sync with Backend
   const fetchLiveInbox = React.useCallback(async () => {
     try {
-      const res = await fetch('/api/inbox', {
+      const res = await fetch(`${API_BASE_URL}/inbox`, {
         headers: {
           'x-user-role': 'provincial',
           'x-user-municipality': 'all',

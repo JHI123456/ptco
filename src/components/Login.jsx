@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import turismoLogo from '../assets/turismo.png';
 import nuevaVizcayaMap from '../assets/Backround.png';
 import './Login.css';
+import { API_BASE_URL } from '../services/api';
 
 // SVG Icons
 const MailIcon = () => (
@@ -278,7 +279,7 @@ export default function Login({ onLogin }) {
 
         try {
             // Mahigpit na pagsusuri laban sa MongoDB Database
-            const res = await fetch('/api/auth/login', {
+            const res = await fetch(`${API_BASE_URL}/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
@@ -366,7 +367,7 @@ export default function Login({ onLogin }) {
         setIsSubmitting(true);
 
         try {
-            const response = await fetch('/api/auth/register', {
+            const response = await fetch(`${API_BASE_URL}/auth/register`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

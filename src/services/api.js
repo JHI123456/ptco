@@ -1,6 +1,9 @@
 // TurismoTrack API Client Service
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
+const rawUrl = (import.meta.env.VITE_API_URL || "").trim().replace(/\/+$/, "");
+export const API_BASE_URL = rawUrl
+  ? (rawUrl.endsWith("/api") ? rawUrl : `${rawUrl}/api`)
+  : "/api";
 
 /**
  * Fetch LGUs from MongoDB backend API
