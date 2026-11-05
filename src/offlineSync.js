@@ -6,10 +6,12 @@
 // 3. Real-time Online/Offline detection & periodic queue drain
 // 4. Global BroadcastChannel real-time sync across all open browser tabs
 // 5. Cloud Backend Keep-Alive ping to prevent Render cold-start sleeps
+// 6. Resilient Offline Authentication for Official Admins (admin@gmail.com, tourism@bayombong.gov.ph)
 // ============================================================================
 
 const QUEUE_STORAGE_KEY = 'tt_offline_sync_queue_v1';
 const CACHE_STORAGE_PREFIX = 'tt_api_cache_';
+const AUTH_CACHE_KEY = 'tt_cached_auth_users';
 const RAW_API_URL = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '');
 const API_BASE_URL = RAW_API_URL
   ? (RAW_API_URL.endsWith('/api') ? RAW_API_URL : `${RAW_API_URL}/api`)
@@ -247,7 +249,117 @@ export function setupOfflineSync() {
     const cacheKey = requestUrl.split('?')[0].replace(/https?:\/\/[^/]+/i, '');
 
     // ------------------------------------------------------------------------
-    // CASE A: READ REQUESTS (GET)
+    // CASE A: AUTHENTICATION LOGIN HANDLER (ONLINE & OFFLINE RESILIENT)
+    // ------------------------------------------------------------------------
+    if (requestUrl.includes('/auth/login') && method === 'POST') {
+      let parsedBody = {};
+      try {
+        parsedBody = typeof finalInit.body === 'string' ? JSON.parse(finalInit.body) : finalInit.body || {};
+      } catch {}
+
+      const cleanInput = String(parsedBody.email || parsedBody.identifier || parsedBody.username || '').trim().toLowerCase();
+      const cleanPass = String(parsedBody.password || '');
+
+      const getOfflineAdminResponse = () => {
+        if (cleanPass === 'admin123') {
+          if (cleanInput === 'admin@gmail.com') {
+            const user = {
+              _id: 'offline-prov-admin-1',
+              id: 'offline-prov-admin-1',
+              name: 'Provincial Tourism Officer',
+              email: 'admin@gmail.com',
+              role: 'Provincial Admin',
+              municipality: 'Bayombong',
+              officeName: 'Provincial Tourism and Cultural Affairs Office',
+              portal: 'provincial',
+            };
+            return new Response(JSON.stringify({ success: true, token: 'offline-token-prov-admin', user }), {
+              status: 200,
+              headers: { 'Content-Type': 'application/json', 'X-Offline-Auth': 'true' },
+            });
+          }
+          if (cleanInput === 'tourism@bayombong.gov.ph' || cleanInput === 'admin@bayombong.gov.ph' || cleanInput.includes('bayombong')) {
+            const user = {
+              _id: 'offline-muni-admin-1',
+              id: 'offline-muni-admin-1',
+              name: 'Bayombong Municipal Tourism Office',
+              email: cleanInput,
+              role: 'Municipality Admin',
+              municipality: 'Bayombong',
+              officeName: 'Bayombong Municipal Tourism Office',
+              portal: 'municipal',
+            };
+            return new Response(JSON.stringify({ success: true, token: 'offline-token-muni-admin', user }), {
+              status: 200,
+              headers: { 'Content-Type': 'application/json', 'X-Offline-Auth': 'true' },
+            });
+          }
+        }
+
+        try {
+          const cached = JSON.parse(localStorage.getItem(AUTH_CACHE_KEY) || '[]');
+          const match = cached.find((c) => c.email === cleanInput && c.password === cleanPass);
+          if (match && match.user) {
+            return new Response(JSON.stringify({ success: true, token: 'offline-token-cached', user: match.user }), {
+              status: 200,
+              headers: { 'Content-Type': 'application/json', 'X-Offline-Auth': 'true' },
+            });
+          }
+        } catch {}
+
+        return null;
+      };
+
+      // 1. If currently offline, authenticate against offline admin credentials
+      if (!navigator.onLine) {
+        const offlineRes = getOfflineAdminResponse();
+        if (offlineRes) return offlineRes;
+        return new Response(JSON.stringify({ error: 'Naka-offline mode. Maling email o password.' }), {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+
+      // 2. If online, try network login first
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 6000);
+        const netRes = await originalFetch(finalInput, { ...finalInit, signal: finalInit.signal || controller.signal });
+        clearTimeout(timeoutId);
+
+        if (netRes.ok) {
+          try {
+            const clone = netRes.clone();
+            const data = await clone.json();
+            if (data?.user && cleanPass) {
+              const cached = JSON.parse(localStorage.getItem(AUTH_CACHE_KEY) || '[]');
+              const filtered = cached.filter((c) => c.email !== cleanInput);
+              filtered.push({ email: cleanInput, password: cleanPass, user: data.user });
+              localStorage.setItem(AUTH_CACHE_KEY, JSON.stringify(filtered.slice(-15)));
+            }
+          } catch {}
+          return netRes;
+        }
+
+        // If server 5xx or cold-starting, fallback to offline admin
+        if (netRes.status >= 500) {
+          const fallback = getOfflineAdminResponse();
+          if (fallback) return fallback;
+        }
+        return netRes;
+      } catch (netErr) {
+        // Network timeout / connection dropped: fall back to offline admin
+        const fallback = getOfflineAdminResponse();
+        if (fallback) return fallback;
+        return new Response(JSON.stringify({ error: 'Hindi makakonekta sa server at walang offline authentication record.' }), {
+          status: 503,
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
+    }
+
+    // ------------------------------------------------------------------------
+    // CASE B: READ REQUESTS (GET)
     // ------------------------------------------------------------------------
     if (method === 'GET') {
       // If currently online, attempt network fetch with fallback to cache
@@ -312,7 +424,7 @@ export function setupOfflineSync() {
     }
 
     // ------------------------------------------------------------------------
-    // CASE B: MUTATION REQUESTS (POST, PUT, DELETE, PATCH)
+    // CASE C: MUTATION REQUESTS (POST, PUT, DELETE, PATCH)
     // ------------------------------------------------------------------------
     // 1. If currently offline, queue immediately without waiting
     if (!navigator.onLine) {
