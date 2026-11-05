@@ -24,8 +24,8 @@ const getAdjustedMetrics = (item, estDate = "Today") => {
   let foreign = 0;
 
   if (d.includes("today")) {
-    visitors = Number(item?.visitorsToday ?? 0);
-    foreign = Number(item?.foreignToday ?? 0);
+    visitors = Number(item?.visitorsToday ?? item?.totalVisitors ?? item?.visitorsThisMonth ?? 0);
+    foreign = Number(item?.foreignToday ?? item?.foreignMice ?? 0);
   } else if (d.includes("yesterday")) {
     visitors = Number(item?.visitorsYesterday ?? 0);
     foreign = Number(item?.foreignYesterday ?? 0);

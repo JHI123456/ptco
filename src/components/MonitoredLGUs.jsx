@@ -20,8 +20,8 @@
     let foreign = 0;
 
     if (d.includes("today")) {
-      visitors = Number(lgu?.visitorsToday ?? 0);
-      foreign = Number(lgu?.foreignToday ?? 0);
+      visitors = Number(lgu?.visitorsToday ?? lgu?.totalVisitors ?? lgu?.visitorsThisMonth ?? 0);
+      foreign = Number(lgu?.foreignToday ?? lgu?.foreignMice ?? 0);
     } else if (d.includes("yesterday")) {
       visitors = Number(lgu?.visitorsYesterday ?? 0);
       foreign = Number(lgu?.foreignYesterday ?? 0);
