@@ -28,7 +28,7 @@ async function createOfficialAdmin() {
     name: "Provincial Tourism Officer",
     officeName: "Provincial Tourism and Cultural Affairs Office",
     establishmentName: "PTCAO Nueva Vizcaya",
-    municipality: "Bayombong",
+    municipality: "Provincial",
     email: adminEmail,
     password: hashedPassword,
     role: "Provincial Admin",
