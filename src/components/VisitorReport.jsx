@@ -96,7 +96,7 @@ const VisitorReport = () => {
     const loadVisitorData = () => {
       fetchVisitorAnalytics().then((res) => {
         if (isMounted && res?.success && res?.data) {
-          if (Array.isArray(res.municipalities) && res.municipalities.length > 0) {
+          if (Array.isArray(res.municipalities)) {
             setRegisteredMunicipalities(res.municipalities);
           }
           setMonthlyData(res.data);
@@ -109,12 +109,16 @@ const VisitorReport = () => {
         }
       });
       fetchLGUs().then((data) => {
-        if (isMounted && Array.isArray(data) && data.length > 0) {
-          const names = data.map((d) => d.name);
-          setRegisteredMunicipalities((prev) => {
-            const combined = Array.from(new Set([...prev, ...names]));
-            return combined;
-          });
+        if (isMounted) {
+          if (Array.isArray(data) && data.length > 0) {
+            const names = data.map((d) => d.name);
+            setRegisteredMunicipalities((prev) => {
+              const combined = Array.from(new Set([...prev, ...names]));
+              return combined;
+            });
+          } else if (Array.isArray(data) && data.length === 0) {
+            setRegisteredMunicipalities([]);
+          }
         }
       });
     };
