@@ -85,7 +85,6 @@ const MonitoredEstablishments = () => {
   const currentYear = now.getFullYear();
 
   const [establishments, setEstablishments] = useState(ESTABLISHMENTS_DATA);
-  const [isLiveMongo, setIsLiveMongo] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDistrict, setSelectedDistrict] = useState("All");
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -102,7 +101,6 @@ const MonitoredEstablishments = () => {
         if (isMounted) {
           const list = Array.isArray(data) ? data : [];
           setEstablishments(list);
-          setIsLiveMongo(true);
         }
       });
     };
@@ -412,11 +410,6 @@ const MonitoredEstablishments = () => {
           </button>
         ))}
         <span className="est-results-counter">
-          {isLiveMongo && (
-            <span style={{ marginRight: "12px", color: "#16a34a", fontWeight: 700 }}>
-              ● MongoDB Live
-            </span>
-          )}
           Showing {filteredData.length} of {establishments.length} registered units
         </span>
       </div>
