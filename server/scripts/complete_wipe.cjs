@@ -47,8 +47,29 @@ async function completeWipe() {
         { upsert: true }
       );
       console.log('✓ [users] Ensured admin@gmail.com is Provincial Admin with password admin123.');
+    } else if (colName === 'auditlogs') {
+      // Clear old audit logs and seed one clean reset record
+      await db.collection('auditlogs').deleteMany({});
+      await db.collection('auditlogs').insertOne({
+        timestamp: new Date(),
+        userId: null,
+        userName: 'Provincial Tourism Officer',
+        userEmail: 'admin@gmail.com',
+        role: 'Provincial Admin',
+        municipality: 'Provincial',
+        establishmentName: 'PTCAO Nueva Vizcaya',
+        action: 'SYSTEM_EVENT',
+        module: 'System',
+        details: 'System database cleared and reset. All municipalities and establishments removed. Ready for official registrations.',
+        status: 'Success',
+        ipAddress: '127.0.0.1',
+        metadata: { wipeType: 'Full reset: LGUs, Establishments & Non-admin Accounts', version: '2.1.0' },
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      console.log('✓ [auditlogs] Reset audit trail and seeded official initial system record.');
     } else {
-      // For all other collections (lgus, establishments, checkins, submissions, messages, etc.)
+      // For all other collections (lgus, establishments, checkins, submissions, messages, forms, etc.)
       const res = await db.collection(colName).deleteMany({});
       console.log(`✓ [${colName}] Deleted ${res.deletedCount} documents (collection now empty).`);
     }

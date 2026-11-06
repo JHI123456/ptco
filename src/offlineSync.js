@@ -9,7 +9,7 @@
 // 6. Resilient Offline Authentication for Official Admins (admin@gmail.com, tourism@bayombong.gov.ph)
 // ============================================================================
 
-const CURRENT_CACHE_VERSION = 'tt_wipe_v20261106_wilwin_clean_v4';
+const CURRENT_CACHE_VERSION = 'tt_wipe_v20261106_total_wipe_v6';
 if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
   try {
     if (localStorage.getItem('tt_current_cache_version') !== CURRENT_CACHE_VERSION) {
@@ -17,7 +17,16 @@ if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
         if (k && (k.startsWith('tt_') || k.startsWith('turismotrack_'))) {
-          if (k !== 'turismotrack_user') {
+          if (k === 'turismotrack_user') {
+            try {
+              const u = JSON.parse(localStorage.getItem(k));
+              if (u?.email !== 'admin@gmail.com') {
+                keysToClear.push(k);
+              }
+            } catch {
+              keysToClear.push(k);
+            }
+          } else {
             keysToClear.push(k);
           }
         }
