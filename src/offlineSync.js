@@ -9,7 +9,7 @@
 // 6. Resilient Offline Authentication for Official Admins (admin@gmail.com, tourism@bayombong.gov.ph)
 // ============================================================================
 
-const CURRENT_CACHE_VERSION = 'tt_wipe_v20261106_zero_state';
+const CURRENT_CACHE_VERSION = 'tt_wipe_v20261106_strict_auth_v3';
 if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
   try {
     if (localStorage.getItem('tt_current_cache_version') !== CURRENT_CACHE_VERSION) {
@@ -280,39 +280,21 @@ export function setupOfflineSync() {
       const cleanPass = String(parsedBody.password || '');
 
       const getOfflineAdminResponse = () => {
-        if (cleanPass === 'admin123') {
-          if (cleanInput === 'admin@gmail.com') {
-            const user = {
-              _id: 'offline-prov-admin-1',
-              id: 'offline-prov-admin-1',
-              name: 'Provincial Tourism Officer',
-              email: 'admin@gmail.com',
-              role: 'Provincial Admin',
-              municipality: 'Bayombong',
-              officeName: 'Provincial Tourism and Cultural Affairs Office',
-              portal: 'provincial',
-            };
-            return new Response(JSON.stringify({ success: true, token: 'offline-token-prov-admin', user }), {
-              status: 200,
-              headers: { 'Content-Type': 'application/json', 'X-Offline-Auth': 'true' },
-            });
-          }
-          if (cleanInput === 'tourism@bayombong.gov.ph' || cleanInput === 'admin@bayombong.gov.ph' || cleanInput.includes('bayombong')) {
-            const user = {
-              _id: 'offline-muni-admin-1',
-              id: 'offline-muni-admin-1',
-              name: 'Bayombong Municipal Tourism Office',
-              email: cleanInput,
-              role: 'Municipality Admin',
-              municipality: 'Bayombong',
-              officeName: 'Bayombong Municipal Tourism Office',
-              portal: 'municipal',
-            };
-            return new Response(JSON.stringify({ success: true, token: 'offline-token-muni-admin', user }), {
-              status: 200,
-              headers: { 'Content-Type': 'application/json', 'X-Offline-Auth': 'true' },
-            });
-          }
+        if (cleanPass === 'admin123' && cleanInput === 'admin@gmail.com') {
+          const user = {
+            _id: 'offline-prov-admin-1',
+            id: 'offline-prov-admin-1',
+            name: 'Provincial Tourism Officer',
+            email: 'admin@gmail.com',
+            role: 'Provincial Admin',
+            municipality: 'Provincial',
+            officeName: 'Provincial Tourism and Cultural Affairs Office',
+            portal: 'provincial',
+          };
+          return new Response(JSON.stringify({ success: true, token: 'offline-token-prov-admin', user }), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json', 'X-Offline-Auth': 'true' },
+          });
         }
 
         try {
