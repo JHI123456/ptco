@@ -187,9 +187,13 @@ router.get("/", async (req, res) => {
             if (arr === yStr || created.toDateString() === yDateString) chkYesterday += count;
           });
 
-          // Submissions for this specific establishment
+          // Submissions for this specific establishment (Exclude CUS / MICE events to strictly count overnight guest arrivals)
           const eSubs = munSubs.filter(
-            (s) => (s.establishmentName || "").toLowerCase().trim() === key
+            (s) =>
+              (s.establishmentName || "").toLowerCase().trim() === key &&
+              !String(s.formType || "").toUpperCase().includes("CUS") &&
+              !String(s.formType || "").toUpperCase().includes("MICE") &&
+              !String(s.formType || "").toUpperCase().includes("CONVENTION")
           );
           let formGrandTotal = 0;
           eSubs.forEach((s) => {
