@@ -1,6 +1,7 @@
 import express from "express";
 import crypto from "crypto";
 import mongoose from "mongoose";
+import { logAudit, extractClientIp } from "../utils/auditLogger.js";
 
 const router = express.Router();
 
@@ -126,6 +127,16 @@ router.post("/register-municipal", async (req, res) => {
     }
 
     console.log(`✅ Centralized: Registered new municipal tourism office for "${cleanMunicipality}" (${cleanEmail}) into Municipalities`);
+
+    await logAudit({
+      user: { _id: userId, email: cleanEmail, name: cleanOfficeName, role: "Municipality Admin", municipality: cleanMunicipality },
+      action: "REGISTER_MUNICIPAL",
+      module: "Authentication",
+      details: `Registered new Municipal Tourism Office account for ${cleanMunicipality}`,
+      status: "Success",
+      ipAddress: extractClientIp(req),
+      metadata: { municipality: cleanMunicipality, officeName: cleanOfficeName },
+    });
 
     return res.status(201).json({
       success: true,
@@ -272,6 +283,16 @@ router.post("/register", async (req, res) => {
       );
     }
 
+    await logAudit({
+      user: { _id: userId, email: cleanEmail, name: establishmentName, role: "establishment", municipality: cleanMunicipality },
+      action: "REGISTER_ESTABLISHMENT",
+      module: "Establishments",
+      details: `Registered new tourism establishment: ${establishmentName} (${establishmentType}) in ${cleanMunicipality}`,
+      status: "Success",
+      ipAddress: extractClientIp(req),
+      metadata: { establishmentName, establishmentType, municipality: cleanMunicipality },
+    });
+
     return res.status(201).json({
       success: true,
       message: "Account created successfully! Switching to sign in...",
@@ -306,18 +327,43 @@ router.post("/login", async (req, res) => {
     const user = await db.collection("users").findOne({ email: cleanEmail });
 
     if (!user) {
+      await logAudit({
+        user: { email: cleanEmail },
+        action: "USER_LOGIN",
+        module: "Authentication",
+        details: `Failed sign-in attempt: Account ${cleanEmail} is not registered`,
+        status: "Failed",
+        ipAddress: extractClientIp(req),
+      });
       return res.status(401).json({
         error: "Hindi nakarehistro ang account na ito. Mangyaring mag-register muna bago mag-login.",
       });
     }
 
     if (user.password && user.password !== hashedPassword && user.password !== password) {
+      await logAudit({
+        user: { email: cleanEmail, name: user.name || user.officeName || user.establishmentName, role: user.role, municipality: user.municipality },
+        action: "USER_LOGIN",
+        module: "Authentication",
+        details: `Failed sign-in attempt: Incorrect password for account ${cleanEmail}`,
+        status: "Failed",
+        ipAddress: extractClientIp(req),
+      });
       return res.status(401).json({ error: "Maling password. Pakisubukang muli." });
     }
 
     const role = user.role || "Municipality Admin";
     const name = user.name || user.officeName || user.establishmentName || cleanEmail;
     const municipality = user.municipality || "Bayombong";
+
+    await logAudit({
+      user: { _id: user._id, email: cleanEmail, name, role, municipality },
+      action: "USER_LOGIN",
+      module: "Authentication",
+      details: `${name} (${role}) signed in successfully`,
+      status: "Success",
+      ipAddress: extractClientIp(req),
+    });
 
     return res.json({
       success: true,

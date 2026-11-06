@@ -18,6 +18,8 @@ import connectDB from "./config/db.js";
 import lguRoutes from "./routes/lguRoutes.js";
 import establishmentRoutes from "./routes/establishmentRoutes.js";
 import authRoutes from "./routes/authRoutes.js";
+import auditLogRoutes from "./routes/auditLogRoutes.js";
+import { logAudit, extractClientIp } from "./utils/auditLogger.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.resolve(__dirname, ".env") });
@@ -47,6 +49,106 @@ app.get("/api/health", (req, res) => {
 app.use("/api/lgus", lguRoutes);
 app.use("/api/establishments", establishmentRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/audit-logs", auditLogRoutes);
+
+// Checkins Endpoints
+app.get("/api/checkins", async (req, res) => {
+  try {
+    const db = mongoose.connection.db;
+    const { municipality, establishmentId } = req.query;
+    const query = {};
+    if (municipality && municipality !== "All") query.municipality = municipality;
+    if (establishmentId) query.establishmentId = establishmentId;
+    const checkins = db ? await db.collection("checkins").find(query).sort({ createdAt: -1 }).toArray().catch(() => []) : [];
+    res.json(checkins);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/checkins", async (req, res) => {
+  try {
+    const db = mongoose.connection.db;
+    if (!db) return res.status(503).json({ error: "Database not connected" });
+    const payload = {
+      ...req.body,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const result = await db.collection("checkins").insertOne(payload);
+
+    // Record Audit Log
+    const estName = payload.establishmentName || "Tourism Establishment";
+    const visitorCount = Number(payload.totalVisitors) || 1;
+    await logAudit({
+      user: {
+        name: estName,
+        email: payload.email || `${estName.toLowerCase().replace(/[^a-z0-9]/g, "")}@gmail.com`,
+        role: "establishment",
+        municipality: payload.municipality || "Bayombong",
+      },
+      action: "VISITOR_CHECKIN",
+      module: "Visitors",
+      details: `Filed visitor check-in: ${visitorCount} guest(s) at ${estName} (${payload.municipality || "Nueva Vizcaya"})`,
+      status: "Success",
+      ipAddress: extractClientIp(req),
+      metadata: { checkinId: result.insertedId, count: visitorCount, municipality: payload.municipality },
+    });
+
+    res.status(201).json({ success: true, id: result.insertedId, ...payload });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Submissions Endpoints
+app.get("/api/submissions", async (req, res) => {
+  try {
+    const db = mongoose.connection.db;
+    const { municipality } = req.query;
+    const query = {};
+    if (municipality && municipality !== "All") query.municipality = municipality;
+    const subs = db ? await db.collection("submissions").find(query).sort({ createdAt: -1 }).toArray().catch(() => []) : [];
+    res.json(subs);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post("/api/submissions", async (req, res) => {
+  try {
+    const db = mongoose.connection.db;
+    if (!db) return res.status(503).json({ error: "Database not connected" });
+    const payload = {
+      ...req.body,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const result = await db.collection("submissions").insertOne(payload);
+
+    // Record Audit Log
+    const estName = payload.establishmentName || payload.name || "Tourism Establishment";
+    const formType = payload.formType || "Monthly Report";
+    await logAudit({
+      user: {
+        name: estName,
+        email: payload.email || `${estName.toLowerCase().replace(/[^a-z0-9]/g, "")}@gmail.com`,
+        role: "establishment",
+        municipality: payload.municipality || "Bayombong",
+      },
+      action: "SUBMIT_FORM",
+      module: "Submissions",
+      details: `Submitted official ${formType} report by ${estName} (${payload.municipality || "Nueva Vizcaya"})`,
+      status: "Success",
+      ipAddress: extractClientIp(req),
+      metadata: { submissionId: result.insertedId, formType, municipality: payload.municipality },
+    });
+
+    res.status(201).json({ success: true, id: result.insertedId, ...payload });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // Users API Endpoint
 app.get("/api/users", async (req, res) => {

@@ -13,7 +13,8 @@ import {
   X,
   Search,
   CheckCircle2,
-  Inbox as InboxIcon
+  Inbox as InboxIcon,
+  ShieldCheck
 } from "lucide-react";
 import "./Dashboard.css";
 import MunicipalRankings from "./MunicipalRankings";
@@ -21,6 +22,7 @@ import VisitorReport from "./VisitorReport";
 import MonitoredEstablishments from "./MonitoredEstablishments";
 import MonitoredLGUs from "./MonitoredLGUs";
 import Inbox from "./Inbox";
+import AuditLog from "./AuditLog";
 import CulturalRibbon from "./CulturalRibbon";
 import { fetchUsers, fetchLGUs, fetchEstablishments, fetchVisitorAnalytics } from "../services/api";
 
@@ -122,6 +124,7 @@ const Dashboard = ({ user, onLogout }) => {
     { name: "Municipalities", icon: MapPin },
     { name: "Users", icon: Users },
     { name: "Establishments", icon: Building2 },
+    { name: "Audit Logs", icon: ShieldCheck },
   ];
 
   // Filter registered municipal officers in Users tab
@@ -420,7 +423,9 @@ const Dashboard = ({ user, onLogout }) => {
                         ? "MONITORED LGUS"
                         : activeTab === "Users"
                           ? "USERS"
-                          : "DASHBOARD"}
+                          : activeTab === "Audit Logs"
+                            ? "AUDIT & ACTIVITY TRAIL"
+                            : "DASHBOARD"}
               </h3>
               <p>
                 {activeTab === "Inbox"
@@ -433,7 +438,9 @@ const Dashboard = ({ user, onLogout }) => {
                         ? "Local Government Unit tourism statistics and carrying capacities"
                         : activeTab === "Users"
                           ? "Directory of accredited municipal tourism officers and administrators"
-                          : "Overview of tourism in Nueva Vizcaya"}
+                          : activeTab === "Audit Logs"
+                            ? "Official system activity trail, security authentications, and compliance verification"
+                            : "Overview of tourism in Nueva Vizcaya"}
               </p>
             </div>
           </div>
@@ -547,6 +554,8 @@ const Dashboard = ({ user, onLogout }) => {
                 </table>
               </div>
             </div>
+          ) : activeTab === "Audit Logs" ? (
+            <AuditLog user={user} />
           ) : (
             /* MAIN DASHBOARD TAB */
             <>

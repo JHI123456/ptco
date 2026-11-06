@@ -73,3 +73,4 @@ completeWipe().catch(err => {
   console.error('Wipe failed:', err);
   process.exit(1);
 });
+

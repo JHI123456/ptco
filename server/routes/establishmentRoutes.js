@@ -1,6 +1,7 @@
 import express from "express";
 import mongoose from "mongoose";
 import Establishment from "../models/Establishment.js";
+import { logAudit, extractClientIp } from "../utils/auditLogger.js";
 
 const router = express.Router();
 
@@ -182,6 +183,17 @@ router.post("/", async (req, res) => {
       ...req.body,
     });
     const saved = await newEst.save();
+
+    await logAudit({
+      user: { name: saved.name, email: saved.email || "establishment@turismotrack.gov.ph", role: "establishment", municipality: saved.municipality },
+      action: "REGISTER_ESTABLISHMENT",
+      module: "Establishments",
+      details: `Registered establishment profile: ${saved.name} in ${saved.municipality}`,
+      status: "Success",
+      ipAddress: extractClientIp(req),
+      metadata: { id: saved.id, name: saved.name, municipality: saved.municipality },
+    });
+
     res.status(201).json(saved);
   } catch (error) {
     res.status(400).json({
