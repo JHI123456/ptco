@@ -71,7 +71,7 @@ const VisitorReport = () => {
 
   // Modal State for adding/logging visitor numbers
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [formMunicipality, setFormMunicipality] = useState("Bayombong");
+  const [formMunicipality, setFormMunicipality] = useState("");
   const [formMonth, setFormMonth] = useState(currentMonthShort);
   const [formDomestic, setFormDomestic] = useState("");
   const [formOvernight, setFormOvernight] = useState("");

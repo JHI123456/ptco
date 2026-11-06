@@ -53,7 +53,7 @@ app.get("/api/users", async (req, res) => {
   try {
     const db = mongoose.connection.db;
     const users = db
-      ? await db.collection("users").find({}, { projection: { password: 0 } }).toArray().catch(() => [])
+      ? await db.collection("users").find({ role: { $ne: "Provincial Admin" } }, { projection: { password: 0 } }).toArray().catch(() => [])
       : [];
     res.json(users);
   } catch (err) {
@@ -70,17 +70,23 @@ app.get("/api/reports/visitor-analytics", async (req, res) => {
     const establishments = db ? await db.collection("establishments").find({}).toArray().catch(() => []) : [];
     const checkins = db ? await db.collection("checkins").find({}).toArray().catch(() => []) : [];
     const dae2forms = db ? await db.collection("dae2forms").find({}).toArray().catch(() => []) : [];
-    const users = db ? await db.collection("users").find({}).toArray().catch(() => []) : [];
+    const lgus = db ? await db.collection("lgus").find({}).toArray().catch(() => []) : [];
+    const users = db ? await db.collection("users").find({ role: { $ne: "Provincial Admin" } }).toArray().catch(() => []) : [];
 
     const munSet = new Set();
     users.forEach((u) => {
-      if (u.municipality && typeof u.municipality === "string" && u.municipality.trim()) {
+      if (u.municipality && typeof u.municipality === "string" && u.municipality.trim() && u.municipality.toLowerCase() !== "provincial") {
         munSet.add(u.municipality.trim());
       }
     });
     establishments.forEach((e) => {
       if (e.municipality && typeof e.municipality === "string" && e.municipality.trim()) {
         munSet.add(e.municipality.trim());
+      }
+    });
+    lgus.forEach((l) => {
+      if (l.name && typeof l.name === "string" && l.name.trim()) {
+        munSet.add(l.name.trim());
       }
     });
     const municipalities = Array.from(munSet);
@@ -99,24 +105,35 @@ app.get("/api/reports/visitor-analytics", async (req, res) => {
       }));
     });
 
+    // Reconcile and deduplicate per establishment per month
+    const estMonthlyMetrics = {};
+
     // 1. Process Check-in filings
     checkins.forEach((c) => {
       const mun = (c.municipality || "").trim();
-      if (!dataset[mun]) return;
+      if (!mun) return;
       const d = new Date(c.arrivalDate || c.createdAt);
       if (d.getFullYear() !== selectedYear) return;
       const mIdx = d.getMonth();
       const count = Number(c.totalVisitors) || ((Number(c.maleCount) || 0) + (Number(c.femaleCount) || 0)) || 1;
       const isForeign = (c.classificationType || c.residenceStatus || "").toLowerCase().includes("foreign");
       const isOvernight = (Number(c.nights) || 0) >= 1 || !!c.isOvernight;
+      const estKey = (c.establishmentName || c.establishmentId || "unknown").toLowerCase().trim();
 
-      if (isForeign) dataset[mun][mIdx].foreign += count;
-      else dataset[mun][mIdx].domestic += count;
-      if (isOvernight) dataset[mun][mIdx].overnight += count;
-      dataset[mun][mIdx].total += count;
+      if (!estMonthlyMetrics[mun]) estMonthlyMetrics[mun] = {};
+      if (!estMonthlyMetrics[mun][mIdx]) estMonthlyMetrics[mun][mIdx] = {};
+      if (!estMonthlyMetrics[mun][mIdx][estKey]) {
+        estMonthlyMetrics[mun][mIdx][estKey] = { domestic: 0, foreign: 0, overnight: 0, total: 0 };
+      }
+
+      const rec = estMonthlyMetrics[mun][mIdx][estKey];
+      if (isForeign) rec.foreign += count;
+      else rec.domestic += count;
+      if (isOvernight) rec.overnight += count;
+      rec.total += count;
     });
 
-    // 2. Process Form DAE-2 monthly submissions
+    // 2. Process Form DAE-2 monthly submissions (deduplicate against checkins: take max, not sum)
     const MONTH_MAP = {
       january: 0, jan: 0, february: 1, feb: 1, march: 2, mar: 2,
       april: 3, apr: 3, may: 4, june: 5, jun: 5, july: 6, jul: 6,
@@ -125,7 +142,7 @@ app.get("/api/reports/visitor-analytics", async (req, res) => {
     };
     dae2forms.forEach((f) => {
       const mun = (f.municipality || "").trim();
-      if (!dataset[mun]) return;
+      if (!mun) return;
       const rYear = Number(f.reportingYear) || new Date(f.submittedAt || f.createdAt || Date.now()).getFullYear();
       if (rYear !== selectedYear) return;
 
@@ -140,12 +157,52 @@ app.get("/api/reports/visitor-analytics", async (req, res) => {
       const dom = Number(f.domesticArrival) || 0;
       const forr = (Number(f.foreignArrival) || 0) + (Number(f.overseasArrival) || 0);
       const tot = Number(f.totalGuests) || dom + forr;
-      const ovn = Number(f.totalGuestNights) || Number(f.roomsOccupied) || tot;
+      // Headcount of overnight guests cannot exceed total guests
+      const ovn = Math.min(tot, Number(f.roomsOccupied) || tot);
+      const estKey = (f.establishmentName || "unknown").toLowerCase().trim();
 
-      dataset[mun][mIdx].domestic += dom;
-      dataset[mun][mIdx].foreign += forr;
-      dataset[mun][mIdx].overnight += ovn;
-      dataset[mun][mIdx].total += tot;
+      if (!estMonthlyMetrics[mun]) estMonthlyMetrics[mun] = {};
+      if (!estMonthlyMetrics[mun][mIdx]) estMonthlyMetrics[mun][mIdx] = {};
+
+      const existing = estMonthlyMetrics[mun][mIdx][estKey];
+      if (existing) {
+        existing.domestic = Math.max(existing.domestic, dom);
+        existing.foreign = Math.max(existing.foreign, forr);
+        existing.overnight = Math.max(existing.overnight, ovn);
+        existing.total = Math.max(existing.total, tot, existing.domestic + existing.foreign);
+      } else {
+        estMonthlyMetrics[mun][mIdx][estKey] = {
+          domestic: dom,
+          foreign: forr,
+          overnight: ovn,
+          total: tot,
+        };
+      }
+    });
+
+    // Populate dataset from reconciled estMonthlyMetrics
+    Object.keys(estMonthlyMetrics).forEach((mun) => {
+      if (!dataset[mun]) {
+        dataset[mun] = MONTH_NAMES.map((m) => ({
+          month: m,
+          label: m,
+          domestic: 0,
+          overnight: 0,
+          foreign: 0,
+          total: 0,
+        }));
+      }
+      Object.keys(estMonthlyMetrics[mun]).forEach((mIdxStr) => {
+        const mIdx = Number(mIdxStr);
+        if (dataset[mun] && dataset[mun][mIdx]) {
+          Object.values(estMonthlyMetrics[mun][mIdx]).forEach((est) => {
+            dataset[mun][mIdx].domestic += est.domestic;
+            dataset[mun][mIdx].foreign += est.foreign;
+            dataset[mun][mIdx].overnight += est.overnight;
+            dataset[mun][mIdx].total += est.total;
+          });
+        }
+      });
     });
 
     // 3. Process Real Today breakdown from checkins

@@ -112,8 +112,8 @@ const Dashboard = ({ user, onLogout }) => {
     return () => window.removeEventListener("storage", syncDataset);
   }, [activeTab]);
 
-  const userName = user?.name && user.name !== "Admin" ? user.name : "Bayombong Tourism Officer";
-  const userRole = user?.role || "Municipal Tourism Officer";
+  const userName = user?.name && user.name !== "Admin" ? user.name : "Provincial Tourism Officer";
+  const userRole = user?.role || "Provincial Admin";
 
   const menuItems = [
     { name: "Dashboard", icon: LayoutDashboard },

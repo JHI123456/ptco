@@ -142,67 +142,80 @@ router.get("/", async (req, res) => {
           (e) => (e.municipality || "").toLowerCase().trim() === lguNameLower
         );
 
-        let estTotal = 0;
-        let estToday = 0;
-        let estYesterday = 0;
-        let estForeign = 0;
-
-        munEsts.forEach((e) => {
-          estTotal += Number(e.totalVisitors || e.visitorsThisMonth || 0);
-          estToday += Number(e.visitorsToday || 0);
-          estYesterday += Number(e.visitorsYesterday || 0);
-          estForeign += Number(e.foreignMice || 0);
-        });
-
         // 2. Check-ins for this municipality
         const munCheckins = checkins.filter(
           (c) => (c.municipality || c.municipalityId || "").toLowerCase().trim() === lguNameLower
         );
 
-        let chkTotal = 0;
-        let chkToday = 0;
-        let chkYesterday = 0;
-        let chkForeign = 0;
-
-        munCheckins.forEach((c) => {
-          const count = Number(c.totalVisitors || c.visitors) || ((Number(c.maleCount) || 0) + (Number(c.femaleCount) || 0)) || 1;
-          const isForeign = (c.classificationType || c.residenceStatus || "").toLowerCase().includes("foreign") || (c.classificationType || "").toLowerCase().includes("balikbayan");
-          const arr = (c.arrivalDate || "").trim();
-          const created = new Date(c.createdAt || Date.now());
-
-          chkTotal += count;
-          if (isForeign) chkForeign += count;
-          if (arr === todayStr || created.toDateString() === todayDateString) {
-            chkToday += count;
-          }
-          if (arr === yStr || created.toDateString() === yDateString) {
-            chkYesterday += count;
-          }
-        });
-
         // 3. Official form submissions
         const munSubs = submissions.filter(
-          (s) => (s.municipality || s.municipalityId || "").toLowerCase().trim() === lguNameLower && s.formData?.totals?.grandTotal
+          (s) => (s.municipality || s.municipalityId || "").toLowerCase().trim() === lguNameLower
         );
-        let formGrandTotal = 0;
-        munSubs.forEach((s) => {
-          const g = Number(s.formData?.totals?.grandTotal);
-          if (g > formGrandTotal) formGrandTotal = g;
+
+        let lguReconciledTotal = 0;
+        let lguToday = 0;
+        let lguYesterday = 0;
+        let lguForeign = 0;
+
+        // Group check-ins and submissions by establishment to prevent double counting
+        const estKeys = new Set([
+          ...munEsts.map((e) => (e.name || "").toLowerCase().trim()),
+          ...munCheckins.map((c) => (c.establishmentName || "").toLowerCase().trim()),
+          ...munSubs.map((s) => (s.establishmentName || "").toLowerCase().trim()),
+        ]);
+        estKeys.delete("");
+
+        estKeys.forEach((key) => {
+          // Check-ins for this specific establishment
+          const eCheckins = munCheckins.filter(
+            (c) => (c.establishmentName || "").toLowerCase().trim() === key
+          );
+          let chkTotal = 0;
+          let chkToday = 0;
+          let chkYesterday = 0;
+          let chkForeign = 0;
+
+          eCheckins.forEach((c) => {
+            const count = Number(c.totalVisitors || c.visitors) || ((Number(c.maleCount) || 0) + (Number(c.femaleCount) || 0)) || 1;
+            const isForeign = (c.classificationType || c.residenceStatus || "").toLowerCase().includes("foreign") || (c.classificationType || "").toLowerCase().includes("balikbayan");
+            const arr = (c.arrivalDate || "").trim();
+            const created = new Date(c.createdAt || Date.now());
+
+            chkTotal += count;
+            if (isForeign) chkForeign += count;
+            if (arr === todayStr || created.toDateString() === todayDateString) chkToday += count;
+            if (arr === yStr || created.toDateString() === yDateString) chkYesterday += count;
+          });
+
+          // Submissions for this specific establishment
+          const eSubs = munSubs.filter(
+            (s) => (s.establishmentName || "").toLowerCase().trim() === key
+          );
+          let formGrandTotal = 0;
+          eSubs.forEach((s) => {
+            const g = Number(s.formData?.totals?.grandTotal || s.formData?.totalGuests || s.visitors || 0);
+            if (g > formGrandTotal) formGrandTotal = g;
+          });
+
+          const uniqueEstTotal = Math.max(chkTotal, formGrandTotal);
+          lguReconciledTotal += uniqueEstTotal;
+          lguToday += chkToday;
+          lguYesterday += chkYesterday;
+          lguForeign += chkForeign;
         });
 
-        const finalTotal = Math.max(estTotal, chkTotal, formGrandTotal, Number(lgu.totalVisitors) || 0);
-        const finalToday = Math.max(estToday, chkToday, Number(lgu.visitorsToday) || 0);
-        const finalYesterday = Math.max(estYesterday, chkYesterday, Number(lgu.visitorsYesterday) || 0);
-        const finalForeign = Math.max(estForeign, chkForeign, Number(lgu.foreignMice) || 0);
+        // Fallback to direct check-ins or stored total if no keys found
+        const finalTotal = lguReconciledTotal > 0 ? lguReconciledTotal : Number(lgu.totalVisitors) || 0;
 
         lgu.totalVisitors = finalTotal;
         lgu.visitorsThisMonth = finalTotal;
-        lgu.visitorsToday = finalToday;
-        lgu.visitorsYesterday = finalYesterday;
-        lgu.foreignMice = finalForeign;
-        if (munEsts.length > 0 && (!lgu.intel || !lgu.intel.registeredSites)) {
+        lgu.visitorsToday = lguToday;
+        lgu.visitorsYesterday = lguYesterday;
+        lgu.foreignMice = lguForeign;
+        if (munEsts.length > 0) {
           if (!lgu.intel) lgu.intel = {};
           lgu.intel.registeredSites = munEsts.length;
+          lgu.intel.currentHeadcount = `${finalTotal} / ${lgu.intel.carryingCapacity ? lgu.intel.carryingCapacity.replace(/[^0-9,]/g, "") : "2,000"}`;
         }
       });
     }

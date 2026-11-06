@@ -62,7 +62,7 @@ const EMPTY_OBJ = {};
    ========================================================================== */
 function VAR2DocumentSheet({ item }) {
   const formData = item.formData || EMPTY_OBJ;
-  const municipality = item.municipality || formData.municipality || 'Bayombong';
+  const municipality = item.municipality || formData.municipality || '—';
   const province = formData.province || 'NUEVA VIZCAYA';
   const period =
     formData.monthYear ||
@@ -498,7 +498,7 @@ function VAR2DocumentSheet({ item }) {
 function DAE1ADocumentSheet({ item }) {
   const formData = item.formData || {};
   const estName = formData.establishmentName || item.sender || 'Registered Accommodation';
-  const muni = item.municipality || formData.municipality || 'Bayombong';
+  const muni = item.municipality || formData.municipality || '—';
   const period = formData.reportingPeriod || item.details?.reportingPeriod || 'Current Month';
   const totalCheckedIn = item.details?.domesticGuests ? (Number(item.details.domesticGuests) + Number(item.details.foreignGuests || 0)) : (formData.guestCheckedIn || item.details?.totalVisitors || 3420);
   const domGuests = item.details?.domesticGuests || formData.domesticGuestArrival || 3180;
@@ -591,7 +591,7 @@ function DAE1ADocumentSheet({ item }) {
 function DAE2DocumentSheet({ item }) {
   const formData = item.formData || {};
   const estName = formData.establishmentName || item.sender || 'Accommodation Facility';
-  const muni = item.municipality || formData.municipality || 'Bayombong';
+  const muni = item.municipality || formData.municipality || '—';
   const period = formData.reportingPeriod || item.details?.reportingPeriod || 'Current Month';
 
   return (
@@ -737,8 +737,8 @@ function DAE3B2DocumentSheet({ item }) {
    ========================================================================== */
 function DOTDocumentSheet({ item }) {
   const formData = item.formData || {};
-  const estName = formData.establishmentName || item.sender || 'Torres / Bayombong Hotel';
-  const muni = item.municipality || formData.municipality || 'Bayombong';
+  const estName = formData.establishmentName || item.sender || 'Registered Accommodation';
+  const muni = item.municipality || formData.municipality || '—';
   const period = formData.reportingPeriod || '2026 Q3';
   const totalVisitors = item.details?.totalVisitors || formData.totalVisitors || 4;
 
