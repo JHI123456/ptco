@@ -55,3 +55,4 @@ async function removeMunicipalityAndAdmins() {
 }
 
 removeMunicipalityAndAdmins().catch(console.error);
+
