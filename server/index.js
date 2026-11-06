@@ -55,10 +55,19 @@ app.use("/api/audit-logs", auditLogRoutes);
 app.get("/api/checkins", async (req, res) => {
   try {
     const db = mongoose.connection.db;
-    const { municipality, establishmentId } = req.query;
+    const { municipality, establishmentId, establishmentName } = req.query;
     const query = {};
     if (municipality && municipality !== "All") query.municipality = municipality;
-    if (establishmentId) query.establishmentId = establishmentId;
+    if (establishmentName) {
+      query.establishmentName = { $regex: new RegExp(establishmentName.trim(), "i") };
+    }
+    if (establishmentId) {
+      const orList = [{ establishmentId: establishmentId }];
+      if (mongoose.Types.ObjectId.isValid(establishmentId)) {
+        orList.push({ establishmentId: new mongoose.Types.ObjectId(establishmentId) });
+      }
+      query.$or = orList;
+    }
     const checkins = db ? await db.collection("checkins").find(query).sort({ createdAt: -1 }).toArray().catch(() => []) : [];
     res.json(checkins);
   } catch (err) {
