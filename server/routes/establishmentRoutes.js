@@ -7,8 +7,13 @@ const router = express.Router();
 // GET /api/establishments - Get all establishments with category, district, search filters
 router.get("/", async (req, res) => {
   try {
-    const { category, district, search, sort } = req.query;
+    const { category, district, search, sort, municipality } = req.query;
     let query = {};
+
+    if (municipality && municipality !== "All" && municipality !== "Province") {
+      const cleanMuni = municipality.trim().replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&").replace(/ñ/gi, "[nñ]");
+      query.municipality = { $regex: new RegExp(`^${cleanMuni}$`, "i") };
+    }
 
     if (district && district !== "All") {
       query.district = district;
