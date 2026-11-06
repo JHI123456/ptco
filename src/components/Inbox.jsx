@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import './Inbox.css';
 import OfficialFormViewer from './OfficialFormViewer';
+import ErrorBoundary from './ErrorBoundary';
 
 // Initial sample data representing municipal submissions across Nueva Vizcaya
 const INITIAL_SAMPLE_MESSAGES = [];
@@ -705,7 +706,12 @@ export default function Inbox({ user: _user }) {
               )}
 
               {/* Authentic Form Table / Official Document Sheet */}
-              <OfficialFormViewer item={selectedItem} />
+              <ErrorBoundary
+                title="Filing View Notice"
+                description="Could not render the complete official layout. Details of the filing are shown below."
+              >
+                <OfficialFormViewer item={selectedItem} />
+              </ErrorBoundary>
             </div>
 
             <div className="tt-modal-footer">

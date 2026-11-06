@@ -11,6 +11,17 @@ export default function OfficialFormViewer({ item }) {
 
   const fType = String(item.formType || item.formData?.formType || item.formData?.form || '').toUpperCase();
 
+  // 0. FORM A (AE DAE-1B by Country) RENDERER
+  if (
+    fType.includes('FORM A') ||
+    fType.includes('FORM-A') ||
+    fType.includes('DAE-1B') ||
+    fType.includes('DAE 1B') ||
+    fType.includes('AE DAE-1B')
+  ) {
+    return <FormADocumentSheet item={item} />;
+  }
+
   // 1. VAR 2 RENDERER — Matches User's Official Reference Document (Image 1)
   if (
     fType.includes('VAR 2') ||
@@ -49,6 +60,11 @@ export default function OfficialFormViewer({ item }) {
   // 7. CUS FORM RENDERER
   if (fType.includes('CUS') || fType.includes('CUSTOMS')) {
     return <CUSDocumentSheet item={item} />;
+  }
+
+  // 8. VISITOR CHECK-IN RENDERER
+  if (fType.includes('CHECK-IN') || fType.includes('CHECKIN') || fType.includes('CHECK IN')) {
+    return <CheckInDocumentSheet item={item} />;
   }
 
   // Fallback: Default Executive Summary Sheet
@@ -825,36 +841,179 @@ function CUSDocumentSheet({ item }) {
    Default Executive Sheet
    ========================================================================== */
 function DefaultDocumentSheet({ item }) {
+  const detailsOrData = (typeof item.formData === 'object' && item.formData !== null)
+    ? item.formData
+    : (typeof item.details === 'object' && item.details !== null)
+    ? item.details
+    : null;
+
   return (
     <div className="ofv-container">
       <div className="afv-official-header" style={{ background: '#0f172a' }}>
         <div className="afv-header-badge">{item.formType || 'OFFICIAL FILING'}</div>
         <h3>{item.subject}</h3>
-        <p className="afv-header-sub">Submitted by {item.sender} • {item.municipality} • {item.date}</p>
+        <p className="afv-header-sub">Submitted by {item.sender || 'Accommodation Facility'} • {item.municipality || 'Nueva Vizcaya'} • {item.date || 'Today'}</p>
       </div>
 
       <div className="afv-section-card">
         <h4>Submission Summary & Context</h4>
-        <p style={{ lineHeight: 1.6, color: '#334155' }}>{item.body}</p>
+        <p style={{ lineHeight: 1.6, color: '#334155' }}>{item.body || 'No summary notes submitted.'}</p>
       </div>
 
-      {item.details && (
+      {detailsOrData && (
         <div className="afv-section-card">
           <h4>Compliance Metrics</h4>
           <table className="afv-table">
             <tbody>
-              {Object.entries(item.details).map(([k, v]) => (
-                <tr key={k}>
-                  <td style={{ fontWeight: 600, textTransform: 'capitalize', width: '40%' }}>
-                    {k.replace(/([A-Z])/g, ' $1')}
-                  </td>
-                  <td style={{ fontWeight: 700, color: '#0f172a' }}>{String(v)}</td>
-                </tr>
-              ))}
+              {Object.entries(detailsOrData).map(([k, v]) => {
+                if (typeof v === 'object' && v !== null) return null;
+                return (
+                  <tr key={k}>
+                    <td style={{ fontWeight: 600, textTransform: 'capitalize', width: '40%' }}>
+                      {k.replace(/([A-Z])/g, ' $1')}
+                    </td>
+                    <td style={{ fontWeight: 700, color: '#0f172a' }}>{String(v)}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+/* ==========================================================================
+   FORM A Document Sheet (AE DAE-1B by Country)
+   ========================================================================== */
+function FormADocumentSheet({ item }) {
+  const formData = item.formData || item.details || {};
+  const estName = formData.establishmentName || item.sender || 'Accommodation Facility';
+  const muni = formData.municipality || item.municipality || '—';
+  const province = formData.province || 'Nueva Vizcaya';
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+  let repMonth = formData.reportMonthName;
+  if (!repMonth && formData.month) {
+    const mNum = Number(formData.month);
+    repMonth = (!isNaN(mNum) && mNum >= 1 && mNum <= 12) ? monthNames[mNum - 1] : String(formData.month);
+  }
+  if (!repMonth) repMonth = 'November';
+  const repYear = String(formData.reportYear || formData.year || '2026');
+
+  const filipinoNat = Number(formData.filipinoNat ?? formData.philResidents ?? formData.visitors ?? 0) || 0;
+  const foreignNatInPH = Number(formData.foreignNatInPH || 0) || 0;
+  const totalPhil = Number(formData.totalPhilippineResidents ?? (filipinoNat + foreignNatInPH)) || 0;
+  const totalNonPhil = Number(formData.totalNonPhilippineResidents || 0) || 0;
+  const overseasFil = Number(formData.overseasFilipino ?? formData.overseasFilipinos ?? 0) || 0;
+  const grandTotal = Number(formData.grandTotal ?? formData.visitors ?? (totalPhil + totalNonPhil + overseasFil)) || 0;
+
+  return (
+    <div className="ofv-container" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+      <div className="afv-official-header" style={{ borderLeftColor: '#166534', background: '#166534' }}>
+        <div className="afv-header-badge" style={{ background: '#ffffff', color: '#166534' }}>OFFICIAL LGU FORM DAE-1B</div>
+        <h3>FORM A — Report on Regional Distribution of Travelers (AE DAE-1B by Country)</h3>
+        <p className="afv-header-sub">Accommodation Monthly Statistical Report — {estName} ({muni}, {province})</p>
+      </div>
+
+      <div className="afv-meta-card">
+        <div className="afv-meta-grid">
+          <div className="afv-meta-item">
+            <label>Accommodation Establishment</label>
+            <div className="afv-readonly-value bold">{estName}</div>
+          </div>
+          <div className="afv-meta-item">
+            <label>Municipality</label>
+            <div className="afv-readonly-value bold">{muni}</div>
+          </div>
+          <div className="afv-meta-item">
+            <label>Reporting Period</label>
+            <div className="afv-readonly-value highlight">{String(repMonth).toUpperCase()} {repYear}</div>
+          </div>
+          <div className="afv-meta-item">
+            <label>Grand Total Arrivals</label>
+            <div className="afv-readonly-value bold" style={{ color: '#166534' }}>{grandTotal.toLocaleString()} guests</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="afv-section-card">
+        <h4>Residency Distribution Summary</h4>
+        <table className="afv-table">
+          <thead>
+            <tr style={{ background: '#166534', color: '#ffffff' }}>
+              <th>Country / Residency Classification</th>
+              <th style={{ textAlign: 'right' }}>Total Arrivals</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Philippine Residents</strong></td>
+              <td style={{ textAlign: 'right', fontWeight: 700 }}>{totalPhil.toLocaleString()}</td>
+            </tr>
+            <tr>
+              <td style={{ paddingLeft: '24px' }}>Filipino Nationality</td>
+              <td style={{ textAlign: 'right' }}>{filipinoNat.toLocaleString()}</td>
+            </tr>
+            <tr>
+              <td style={{ paddingLeft: '24px' }}>Foreign Nationality (Residing in PH)</td>
+              <td style={{ textAlign: 'right' }}>{foreignNatInPH.toLocaleString()}</td>
+            </tr>
+            <tr>
+              <td><strong>Non-Philippine Residents (Foreign Nationals)</strong></td>
+              <td style={{ textAlign: 'right', fontWeight: 700 }}>{totalNonPhil.toLocaleString()}</td>
+            </tr>
+            <tr>
+              <td><strong>Overseas Filipinos (Balikbayan)</strong></td>
+              <td style={{ textAlign: 'right', fontWeight: 700 }}>{overseasFil.toLocaleString()}</td>
+            </tr>
+            <tr className="afv-row-total" style={{ background: '#0f172a', color: '#4ade80' }}>
+              <td><strong>GRAND TOTAL GUEST ARRIVALS</strong></td>
+              <td style={{ textAlign: 'right', fontWeight: 800 }}>{grandTotal.toLocaleString()}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ==========================================================================
+   Check-In Document Sheet
+   ========================================================================== */
+function CheckInDocumentSheet({ item }) {
+  const formData = item.formData || item.details || {};
+  const guestName = formData.guestName || formData.name || formData.leadGuest || item.sender || 'Guest Record';
+  const totalVisitors = Number(formData.totalVisitors || formData.visitors || 1);
+  const stayType = formData.stayType || (formData.isOvernight ? 'Overnight' : 'Day Tour');
+
+  return (
+    <div className="ofv-container" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+      <div className="afv-official-header" style={{ borderLeftColor: '#0284c7', background: '#0284c7' }}>
+        <div className="afv-header-badge" style={{ background: '#ffffff', color: '#0284c7' }}>VISITOR CHECK-IN LOG</div>
+        <h3>Guest Registration Record: {guestName}</h3>
+        <p className="afv-header-sub">Front Desk Registration Record — {item.sender || 'Accommodation Facility'}</p>
+      </div>
+
+      <div className="afv-meta-card">
+        <div className="afv-meta-grid">
+          <div className="afv-meta-item">
+            <label>Guest / Group Name</label>
+            <div className="afv-readonly-value bold">{guestName}</div>
+          </div>
+          <div className="afv-meta-item">
+            <label>Total Visitors</label>
+            <div className="afv-readonly-value bold" style={{ color: '#0284c7' }}>{totalVisitors}</div>
+          </div>
+          <div className="afv-meta-item">
+            <label>Stay Type</label>
+            <div className="afv-readonly-value highlight">{stayType}</div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

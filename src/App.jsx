@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import Login from './components/Login'
 import Dashboard from './components/Dashboard'
 import PWAInstallPrompt from './components/PWAInstallPrompt'
+import ErrorBoundary from './components/ErrorBoundary'
 
 function App() {
   // Restore logged-in provincial user session if available
@@ -41,14 +42,17 @@ function App() {
   };
 
   return (
-    <>
+    <ErrorBoundary
+      title="Application Display Notice"
+      description="An interface update occurred. Click Refresh to restore the dashboard."
+    >
       {user ? (
         <Dashboard user={user} onLogout={handleLogout} />
       ) : (
         <Login onLogin={handleLogin} />
       )}
       <PWAInstallPrompt appName="TurismoTrack PTCO" />
-    </>
+    </ErrorBoundary>
   )
 }
 
