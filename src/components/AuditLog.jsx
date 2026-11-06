@@ -512,3 +512,4 @@ const AuditLog = ({ user }) => {
 };
 
 export default AuditLog;
+

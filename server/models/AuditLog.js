@@ -75,3 +75,4 @@ auditLogSchema.index({ municipality: 1, action: 1 });
 const AuditLog = mongoose.models.AuditLog || mongoose.model("AuditLog", auditLogSchema);
 
 export default AuditLog;
+
