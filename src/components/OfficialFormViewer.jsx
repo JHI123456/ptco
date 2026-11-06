@@ -844,8 +844,8 @@ function DefaultDocumentSheet({ item }) {
   const detailsOrData = (typeof item.formData === 'object' && item.formData !== null)
     ? item.formData
     : (typeof item.details === 'object' && item.details !== null)
-    ? item.details
-    : null;
+      ? item.details
+      : null;
 
   return (
     <div className="ofv-container">

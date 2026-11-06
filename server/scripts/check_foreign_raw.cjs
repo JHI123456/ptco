@@ -8,3 +8,4 @@ const sheetXml = fs.readFileSync(path.join(tempDir, 'worksheets', 'sheet1.xml'),
   const m = re.exec(sheetXml);
   if (m) console.log(`Row ${rowNum}:\n`, m[1]);
 });
+

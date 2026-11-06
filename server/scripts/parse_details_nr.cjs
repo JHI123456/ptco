@@ -56,3 +56,4 @@ s1.filter(r => r.rowNum >= 20 && r.rowNum <= 145).forEach(r => {
     console.log(`Row ${r.rowNum}: [${label}] Total=${total} | Days: ${daysWithValues.map(([k, v]) => `${k}:${v}`).join(', ')}`);
   }
 });
+
