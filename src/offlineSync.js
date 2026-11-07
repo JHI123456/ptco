@@ -9,7 +9,7 @@
 // 6. Resilient Offline Authentication for Official Admins (admin@gmail.com, tourism@bayombong.gov.ph)
 // ============================================================================
 
-const CURRENT_CACHE_VERSION = 'tt_sync_zen_hotel_oct2026_v12';
+const CURRENT_CACHE_VERSION = 'tt_sync_zen_hotel_oct2026_v13';
 
 function seedPTCOZenHotelDefaults() {
   if (typeof window === 'undefined' || typeof localStorage === 'undefined') return;
