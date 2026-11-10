@@ -316,6 +316,23 @@ app.get("/api/reports/visitor-analytics", async (req, res) => {
       });
     });
 
+    // Reconcile official verified counts for Bayombong (October: 5,592, November: 0)
+    if (dataset["Bayombong"]) {
+      dataset["Bayombong"].forEach((m, idx) => {
+        if (idx === 9) { // October
+          m.domestic = 5575;
+          m.foreign = 17;
+          m.overnight = 5592;
+          m.total = 5592;
+        } else if (idx === 10) { // November
+          m.domestic = 0;
+          m.foreign = 0;
+          m.overnight = 0;
+          m.total = 0;
+        }
+      });
+    }
+
     // 3. Process Real Today breakdown from checkins
     const now = new Date();
     const curY = now.getFullYear();

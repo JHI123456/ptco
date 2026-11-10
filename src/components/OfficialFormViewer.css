@@ -7,17 +7,17 @@
 .ofv-container {
   width: 100%;
   color: #0f172a;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: 'Outfit', 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 /* ==========================================================================
-   VAR 2: Tourism Attraction Visitor Record (Matching Image 1 Exactly)
+   VAR 2: Tourism Attraction Visitor Record (Unified TurismoTrack Template)
    ========================================================================== */
 .var2-paper-sheet {
   background: #ffffff;
-  border-radius: 8px;
-  border: 1px solid #cbd5e1;
-  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.08);
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.04);
   padding: 24px 28px 28px;
   position: relative;
   overflow-x: auto;
@@ -26,23 +26,44 @@
 /* Top Official Header */
 .var2-doc-header {
   position: relative;
-  border-bottom: 2px solid #0f172a;
-  padding-bottom: 14px;
-  margin-bottom: 16px;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 16px;
+  margin-bottom: 24px;
+}
+
+.var2-doc-header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -14px;
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(
+    90deg,
+    #ef4444 0% 14.28%,
+    #f97316 14.28% 28.56%,
+    #eab308 28.56% 42.84%,
+    #22c55e 42.84% 57.12%,
+    #06b6d4 57.12% 71.4%,
+    #3b82f6 71.4% 85.68%,
+    #8b5cf6 85.68% 100%
+  );
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
 .var2-doc-code {
-  position: absolute;
-  top: 0;
-  right: 0;
-  font-size: 14px;
+  display: inline-block;
+  font-size: 11px;
   font-weight: 800;
-  color: #0f172a;
-  letter-spacing: 0.05em;
+  color: #15803d;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
   padding: 4px 12px;
-  border: 2px solid #0f172a;
-  border-radius: 4px;
-  background: #ffffff;
+  border: none;
+  border-radius: 999px;
+  background: #dcfce7;
+  margin-bottom: 6px;
 }
 
 .var2-doc-titles {
@@ -108,30 +129,32 @@
   border: 1px solid #334155;
 }
 
-/* Yellow Headers matching official DOT VAR 2 paper */
+/* Unified Emerald Headers matching TurismoTrack Template */
 .var2-table thead tr th {
-  border: 1px solid #334155;
-  padding: 6px 4px;
+  border: 1px solid #166534;
+  padding: 7px 4px;
   font-weight: 700;
-  color: #0f172a;
+  color: #ffffff;
   line-height: 1.25;
 }
 
 .var2-th-white {
-  background-color: #ffffff;
-  color: #0f172a;
+  background-color: #15803d;
+  color: #ffffff;
 }
 
 .var2-th-yellow {
-  background-color: #f6c827; /* Official DOT Gold/Yellow */
-  color: #0f172a;
+  background-color: #15803d;
+  color: #ffffff;
   font-weight: 700;
 }
 
 .var2-th-sub {
   font-size: 11px;
   font-weight: 700;
-  background-color: #f6c827;
+  background-color: #f0fdf4;
+  color: #166534 !important;
+  border-color: #bbf7d0 !important;
 }
 
 .var2-col-name {
@@ -275,58 +298,70 @@
 }
 
 /* ==========================================================================
-   DAE-1A & DAE-2 General Form Styles
+   Unified Official Form Header & Tables (Provincial PTCO Auditor View)
    ========================================================================== */
-.afv-official-header {
-  border-radius: 8px;
-  padding: 14px 18px;
-  color: #ffffff;
-  position: relative;
-  margin-bottom: 14px;
-}
-
-.afv-official-header.dae1a-theme {
-  background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%);
-}
-
-.afv-official-header.dae2-theme {
-  background: linear-gradient(135deg, #0f172a 0%, #334155 100%);
-}
-
-.afv-official-header.dae4a-theme {
-  background: linear-gradient(135deg, #065f46 0%, #059669 100%);
-}
-
-.afv-official-header.cus-theme {
-  background: linear-gradient(135deg, #7c2d12 0%, #ea580c 100%);
-}
-
+.afv-official-header,
+.afv-official-header.dae1a-theme,
+.afv-official-header.dae2-theme,
+.afv-official-header.dae4a-theme,
+.afv-official-header.cus-theme,
 .afv-official-header.dot-theme {
-  background: linear-gradient(135deg, #854d0e 0%, #d97706 100%);
+  background: #ffffff;
+  color: #0f172a;
+  padding: 0 0 18px 0;
+  border-radius: 0;
+  border-bottom: 2px solid #e2e8f0;
+  position: relative;
+  margin-bottom: 22px;
+}
+
+.afv-official-header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -14px;
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(
+    90deg,
+    #ef4444 0% 14.28%,
+    #f97316 14.28% 28.56%,
+    #eab308 28.56% 42.84%,
+    #22c55e 42.84% 57.12%,
+    #06b6d4 57.12% 71.4%,
+    #3b82f6 71.4% 85.68%,
+    #8b5cf6 85.68% 100%
+  );
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
 .afv-header-badge {
   display: inline-block;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
-  background: rgba(255, 255, 255, 0.2);
-  padding: 3px 8px;
-  border-radius: 4px;
-  margin-bottom: 4px;
+  background: #dcfce7;
+  color: #15803d;
+  padding: 4px 12px;
+  border-radius: 999px;
+  margin-bottom: 6px;
 }
 
 .afv-official-header h3 {
   margin: 0 0 4px 0;
-  font-size: 17px;
-  font-weight: 700;
+  font-size: 19px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.3px;
 }
 
 .afv-header-sub {
   margin: 0;
-  font-size: 12px;
-  opacity: 0.9;
+  font-size: 13px;
+  color: #64748b;
+  opacity: 1;
 }
 
 .afv-meta-card {
@@ -428,12 +463,15 @@
 }
 
 .afv-table th {
-  background: #f1f5f9;
-  border: 1px solid #cbd5e1;
-  padding: 6px 10px;
+  background: #15803d;
+  border: 1px solid #166534;
+  padding: 8px 12px;
   text-align: left;
   font-weight: 700;
-  color: #334155;
+  color: #ffffff;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
 .afv-table td {

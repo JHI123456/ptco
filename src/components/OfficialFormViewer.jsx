@@ -268,7 +268,7 @@ function VAR2DocumentSheet({ item }) {
       <div className="var2-paper-sheet">
         {/* Document Header */}
         <div className="var2-doc-header">
-          <div className="var2-doc-code">VAR 2</div>
+          <div className="var2-doc-code">OFFICIAL DOT FORM VAR-2</div>
           <div className="var2-doc-titles">
             <h2 className="var2-doc-maintitle">Tourism Attraction Visitor Record</h2>
             <p className="var2-doc-subtitle">
@@ -849,7 +849,7 @@ function DefaultDocumentSheet({ item }) {
 
   return (
     <div className="ofv-container">
-      <div className="afv-official-header" style={{ background: '#0f172a' }}>
+      <div className="afv-official-header">
         <div className="afv-header-badge">{item.formType || 'OFFICIAL FILING'}</div>
         <h3>{item.subject}</h3>
         <p className="afv-header-sub">Submitted by {item.sender || 'Accommodation Facility'} • {item.municipality || 'Nueva Vizcaya'} • {item.date || 'Today'}</p>
@@ -913,9 +913,9 @@ function FormADocumentSheet({ item }) {
   const grandTotal = Number(formData.grandTotal ?? formData.visitors ?? (totalPhil + totalNonPhil + overseasFil)) || (isZenHotel ? 5182 : 0);
 
   return (
-    <div className="ofv-container" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
-      <div className="afv-official-header" style={{ borderLeftColor: '#166534', background: '#166534' }}>
-        <div className="afv-header-badge" style={{ background: '#ffffff', color: '#166534' }}>OFFICIAL LGU FORM DAE-1B</div>
+    <div className="ofv-container">
+      <div className="afv-official-header">
+        <div className="afv-header-badge">OFFICIAL LGU FORM DAE-1B</div>
         <h3>FORM A — Report on Regional Distribution of Travelers (AE DAE-1B by Country)</h3>
         <p className="afv-header-sub">Accommodation Monthly Statistical Report — {estName} ({muni}, {province})</p>
       </div>
@@ -1012,9 +1012,9 @@ function CheckInDocumentSheet({ item }) {
   const stayType = formData.stayType || (formData.isOvernight ? 'Overnight' : 'Day Tour');
 
   return (
-    <div className="ofv-container" style={{ fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
-      <div className="afv-official-header" style={{ borderLeftColor: '#0284c7', background: '#0284c7' }}>
-        <div className="afv-header-badge" style={{ background: '#ffffff', color: '#0284c7' }}>VISITOR CHECK-IN LOG</div>
+    <div className="ofv-container">
+      <div className="afv-official-header">
+        <div className="afv-header-badge">VISITOR CHECK-IN LOG</div>
         <h3>Guest Registration Record: {guestName}</h3>
         <p className="afv-header-sub">Front Desk Registration Record — {item.sender || 'Accommodation Facility'}</p>
       </div>

@@ -2,7 +2,6 @@ import React, { useState, useMemo, useEffect } from "react";
 import {
   Building2,
   Users,
-  BedDouble,
   AlertTriangle,
   Search,
   ChevronDown,
@@ -223,7 +222,6 @@ const MonitoredEstablishments = () => {
       return sum + m.totalVisitors;
     }, 0)
     .toLocaleString();
-  const activeRooms = establishments.length > 0 ? "2,450" : "0";
   const capacityAlertsCount = establishments.filter((e) => {
     const d = cardDates[e.id] || globalDate;
     const m = getAdjustedMetrics(e, d);
@@ -232,7 +230,7 @@ const MonitoredEstablishments = () => {
 
   return (
     <div className="monitored-est-wrapper">
-      {/* 4 TOP SUMMARY METRIC CARDS */}
+      {/* 3 TOP SUMMARY METRIC CARDS */}
       <div className="est-summary-grid">
         {/* Card 1: Monitored Establishments */}
         <div className="est-summary-card">
@@ -264,21 +262,7 @@ const MonitoredEstablishments = () => {
           </div>
         </div>
 
-        {/* Card 3: Active Rooms & Spaces */}
-        <div className="est-summary-card">
-          <div className="est-card-header">
-            <span className="est-metric-label">ACTIVE ROOMS &amp; SPACES</span>
-            <div className="est-icon-badge purple">
-              <BedDouble size={18} />
-            </div>
-          </div>
-          <div className="est-metric-number">{activeRooms}</div>
-          <div className="est-metric-sub purple-sub">
-            {establishments.length > 0 ? "Suites, Eco-Cottages, Function Halls" : "0 Available Units"}
-          </div>
-        </div>
-
-        {/* Card 4: Capacity Alerts */}
+        {/* Card 3: Capacity Alerts */}
         <div className="est-summary-card">
           <div className="est-card-header">
             <span className="est-metric-label">CAPACITY ALERTS</span>

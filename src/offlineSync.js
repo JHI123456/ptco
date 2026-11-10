@@ -9,7 +9,7 @@
 // 6. Resilient Offline Authentication for Official Admins (admin@gmail.com, tourism@bayombong.gov.ph)
 // ============================================================================
 
-const CURRENT_CACHE_VERSION = 'tt_sync_zen_hotel_oct2026_v13';
+const CURRENT_CACHE_VERSION = 'tt_sync_zen_hotel_oct2026_v21';
 
 function seedPTCOZenHotelDefaults() {
   if (typeof window === 'undefined' || typeof localStorage === 'undefined') return;
@@ -55,7 +55,11 @@ function seedPTCOZenHotelDefaults() {
         grandTotal: 5182,
         totalRoomsOccupied: 2229,
         roomsOccupied: 2229,
-        roomsAvailable: 245,
+        roomsAvailable: 2450,
+        totalGuestNights: 5182,
+        alos: 1.0,
+        male: { m: 2686, nonPhil: 9, total: 2695 },
+        female: { f: 2479, nonPhil: 8, total: 2487 },
         preparedBy: {
           name: 'Sallie Fabian',
           designation: 'Duty Manager',
