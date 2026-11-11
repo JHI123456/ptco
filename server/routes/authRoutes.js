@@ -2,6 +2,7 @@ import express from "express";
 import crypto from "crypto";
 import mongoose from "mongoose";
 import { logAudit, extractClientIp } from "../utils/auditLogger.js";
+import { registerPasswordResetRoutes } from "../utils/passwordReset.js";
 
 const router = express.Router();
 
@@ -381,6 +382,21 @@ router.post("/login", async (req, res) => {
   } catch (error) {
     return res.status(500).json({ error: error.message || "Server error during login." });
   }
+});
+
+registerPasswordResetRoutes(router, {
+  findUserByEmail: async (cleanEmail) => {
+    const db = mongoose.connection.db;
+    if (!db) return null;
+    return db.collection("users").findOne({ email: cleanEmail });
+  },
+  updateUserById: async (id, updateFields) => {
+    const db = mongoose.connection.db;
+    if (!db) return null;
+    return db.collection("users").updateOne({ _id: id }, { $set: updateFields });
+  },
+  logAudit,
+  extractClientIp,
 });
 
 export default router;

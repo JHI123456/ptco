@@ -440,6 +440,53 @@ export function setupOfflineSync() {
     }
 
     // ------------------------------------------------------------------------
+    // CASE A2: PASSWORD RESET ENDPOINTS (ONLINE-ONLY, NEVER QUEUE OFFLINE)
+    // ------------------------------------------------------------------------
+    if (
+      (requestUrl.includes('/auth/forgot-password') ||
+        requestUrl.includes('/auth/verify-reset-otp') ||
+        requestUrl.includes('/auth/reset-password')) &&
+      method === 'POST'
+    ) {
+      if (!navigator.onLine) {
+        return new Response(
+          JSON.stringify({
+            error: 'An active internet connection is required to send verification codes and reset your password.',
+          }),
+          { status: 503, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000);
+        const netRes = await originalFetch(finalInput, {
+          ...finalInit,
+          signal: finalInit.signal || controller.signal,
+        });
+        clearTimeout(timeoutId);
+
+        if (netRes.ok && requestUrl.includes('/auth/reset-password')) {
+          try {
+            const parsed = typeof finalInit.body === 'string' ? JSON.parse(finalInit.body) : {};
+            const targetEmail = String(parsed.email || '').trim().toLowerCase();
+            if (targetEmail) {
+              const cached = JSON.parse(localStorage.getItem(AUTH_CACHE_KEY) || '[]');
+              const updated = cached.filter((c) => c.email !== targetEmail);
+              localStorage.setItem(AUTH_CACHE_KEY, JSON.stringify(updated));
+            }
+          } catch {}
+        }
+        return netRes;
+      } catch {
+        return new Response(
+          JSON.stringify({ error: 'Unable to reach the authentication server. Please try again.' }),
+          { status: 503, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
+    // ------------------------------------------------------------------------
     // CASE B: READ REQUESTS (GET)
     // ------------------------------------------------------------------------
     if (method === 'GET') {

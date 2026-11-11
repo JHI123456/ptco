@@ -3,6 +3,7 @@ import turismoLogo from '../assets/turismo.png';
 import nuevaVizcayaMap from '../assets/Backround.png';
 import './Login.css';
 import { API_BASE_URL } from '../services/api';
+import ForgotPasswordView from './ForgotPasswordView';
 
 // SVG Icons
 const MailIcon = () => (
@@ -77,7 +78,12 @@ export default function Login({ onLogin }) {
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
-            if (!window.location.hash || window.location.hash === '#register' || window.location.hash === '') {
+            if (
+                !window.location.hash ||
+                window.location.hash === '#register' ||
+                window.location.hash === '#forgot' ||
+                window.location.hash === ''
+            ) {
                 window.location.hash = '#login';
                 setCurrentHash('#login');
             } else {
@@ -100,6 +106,7 @@ export default function Login({ onLogin }) {
     };
 
     const isRegister = currentHash === '#register';
+    const isForgot = currentHash === '#forgot';
 
     // Login Form State
     const [email, setEmail] = useState('');
@@ -443,7 +450,24 @@ export default function Login({ onLogin }) {
 
             {/* Right Panel */}
             <div className="login-form-panel">
-                {isRegister ? (
+                {isForgot ? (
+                    <ForgotPasswordView
+                        initialEmail={email}
+                        apiBaseUrl={API_BASE_URL}
+                        onBackToLogin={() => {
+                            setLoginError('');
+                            navigateTo('#login');
+                        }}
+                        onResetSuccess={(resetEmail, msg) => {
+                            setEmail(resetEmail);
+                            setPassword('');
+                            setErrors({});
+                            setLoginError('');
+                            setRegistrationSuccessMsg(msg);
+                            navigateTo('#login');
+                        }}
+                    />
+                ) : isRegister ? (
                     /* Registration View */
                     <div className="login-form-wrapper">
                         <div className="login-form-header">
@@ -847,7 +871,17 @@ export default function Login({ onLogin }) {
                             </div>
 
                             <div className="form-options">
-                                <a href="#forgot" className="forgot-password-link" onClick={(e) => e.preventDefault()}>
+                                <a
+                                    href="#forgot"
+                                    className="forgot-password-link"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        setRegistrationSuccessMsg('');
+                                        setLoginError('');
+                                        setErrors({});
+                                        navigateTo('#forgot');
+                                    }}
+                                >
                                     Forgot Password?
                                 </a>
                             </div>
