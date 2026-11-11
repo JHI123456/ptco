@@ -11,14 +11,14 @@
 }
 
 /* ==========================================================================
-   VAR 2: Tourism Attraction Visitor Record (Unified TurismoTrack Template)
+   VAR 2: Tourism Attraction Visitor Record (Classic Official DOT Paper Style)
    ========================================================================== */
 .var2-paper-sheet {
   background: #ffffff;
-  border-radius: 14px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.04);
-  padding: 24px 28px 28px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.08);
+  padding: 28px 32px 34px;
   position: relative;
   overflow-x: auto;
 }
@@ -26,44 +26,23 @@
 /* Top Official Header */
 .var2-doc-header {
   position: relative;
-  border-bottom: 2px solid #e2e8f0;
+  border-bottom: 2px solid #0f172a;
   padding-bottom: 16px;
-  margin-bottom: 24px;
-}
-
-.var2-doc-header::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -14px;
-  height: 6px;
-  border-radius: 3px;
-  background: linear-gradient(
-    90deg,
-    #ef4444 0% 14.28%,
-    #f97316 14.28% 28.56%,
-    #eab308 28.56% 42.84%,
-    #22c55e 42.84% 57.12%,
-    #06b6d4 57.12% 71.4%,
-    #3b82f6 71.4% 85.68%,
-    #8b5cf6 85.68% 100%
-  );
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  margin-bottom: 16px;
 }
 
 .var2-doc-code {
-  display: inline-block;
-  font-size: 11px;
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 14px;
   font-weight: 800;
-  color: #15803d;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
-  padding: 4px 12px;
-  border: none;
-  border-radius: 999px;
-  background: #dcfce7;
-  margin-bottom: 6px;
+  color: #0f172a;
+  letter-spacing: 0.05em;
+  padding: 4px 10px;
+  border: 2px solid #0f172a;
+  border-radius: 4px;
+  background: transparent;
 }
 
 .var2-doc-titles {
@@ -81,17 +60,17 @@
 }
 
 .var2-doc-subtitle {
-  font-size: 12.5px;
+  font-size: 13px;
   font-style: italic;
   color: #475569;
-  margin: 4px 0 0 0;
+  margin: 2px 0 0 0;
 }
 
 .var2-doc-meta-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 28px;
+  gap: 32px;
   margin-top: 14px;
   font-size: 13px;
 }
@@ -99,7 +78,7 @@
 .var2-doc-meta-item {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .var2-meta-label {
@@ -110,51 +89,52 @@
 .var2-meta-value {
   font-weight: 700;
   color: #0f172a;
-  border-bottom: 1px solid #94a3b8;
-  padding-bottom: 1px;
+  border-bottom: 1.5px solid #475569;
+  min-width: 110px;
+  padding: 0 4px 2px;
 }
 
 /* Consolidated Multi-level Table */
 .var2-table-wrapper {
   width: 100%;
   overflow-x: auto;
+  border: 1.5px solid #334155;
+  background: #ffffff;
   margin-top: 8px;
 }
 
 .var2-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 11.5px;
+  font-size: 12px;
   text-align: center;
-  border: 1px solid #334155;
 }
 
-/* Unified Emerald Headers matching TurismoTrack Template */
+/* Yellow Headers matching official DOT VAR 2 paper */
 .var2-table thead tr th {
-  border: 1px solid #166534;
-  padding: 7px 4px;
+  border: 1px solid #475569;
+  padding: 6px 4px;
   font-weight: 700;
-  color: #ffffff;
+  color: #1e293b;
   line-height: 1.25;
 }
 
 .var2-th-white {
-  background-color: #15803d;
-  color: #ffffff;
+  background-color: #f8fafc;
+  color: #0f172a;
 }
 
 .var2-th-yellow {
-  background-color: #15803d;
-  color: #ffffff;
+  background-color: #f6c827; /* Exact DOT Gold/Yellow Header */
+  color: #1e293b;
   font-weight: 700;
 }
 
 .var2-th-sub {
   font-size: 11px;
   font-weight: 700;
-  background-color: #f0fdf4;
-  color: #166534 !important;
-  border-color: #bbf7d0 !important;
+  background-color: #f6c827;
+  color: #1e293b;
 }
 
 .var2-col-name {

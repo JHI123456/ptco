@@ -73,23 +73,40 @@ export default function OfficialFormViewer({ item }) {
 
 const EMPTY_OBJ = {};
 
+function formatVAR2Period(rawPeriod, formData) {
+  if (formData?.displayPeriodLabel) return formData.displayPeriodLabel;
+  const val = String(rawPeriod || '').trim();
+  const shortMatch = val.match(/^([A-Za-z]{3})-(\d{2})$/);
+  if (shortMatch) {
+    const months = {
+      jan: 'January', feb: 'February', mar: 'March', apr: 'April',
+      may: 'May', jun: 'June', jul: 'July', aug: 'August',
+      sep: 'September', oct: 'October', nov: 'November', dec: 'December',
+    };
+    const full = months[shortMatch[1].toLowerCase()];
+    if (full) return `${full} 20${shortMatch[2]}`;
+  }
+  return val || 'Sep-26';
+}
+
 /* ==========================================================================
-   VAR 2 Document Sheet Component (Matches Image 1 Exactly)
+   VAR 2 Document Sheet Component (Matches Classic VAR 2 Paper Form)
    ========================================================================== */
 function VAR2DocumentSheet({ item }) {
   const formData = item.formData || EMPTY_OBJ;
   const municipality = item.municipality || formData.municipality || '—';
   const province = formData.province || 'NUEVA VIZCAYA';
-  const period =
+  const rawPeriod =
     formData.monthYear ||
     formData.reportingPeriod ||
     item.details?.reportingPeriod ||
     'Sep-26';
+  const period = formatVAR2Period(rawPeriod, formData);
 
-  // Format cell: display '—' if empty or 0, else number
+  // Format cell: display '0' consistently matching Municipal VAR 2 sheet
   const formatCell = (val) => {
     const num = Number(val);
-    if (!num || num === 0 || isNaN(num)) return '—';
+    if (!num || isNaN(num)) return '0';
     return num.toLocaleString();
   };
 
@@ -268,7 +285,7 @@ function VAR2DocumentSheet({ item }) {
       <div className="var2-paper-sheet">
         {/* Document Header */}
         <div className="var2-doc-header">
-          <div className="var2-doc-code">OFFICIAL DOT FORM VAR-2</div>
+          <div className="var2-doc-code">VAR 2</div>
           <div className="var2-doc-titles">
             <h2 className="var2-doc-maintitle">Tourism Attraction Visitor Record</h2>
             <p className="var2-doc-subtitle">
@@ -278,7 +295,7 @@ function VAR2DocumentSheet({ item }) {
 
           <div className="var2-doc-meta-row">
             <div className="var2-doc-meta-item">
-              <span className="var2-meta-label">Month/Year:</span>
+              <span className="var2-meta-label">Month/Date/Year:</span>
               <span className="var2-meta-value">{period}</span>
             </div>
             <div className="var2-doc-meta-item">
