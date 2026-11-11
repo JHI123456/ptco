@@ -427,28 +427,29 @@ export default function Login({ onLogin }) {
 
     return (
         <div className="login-container">
-            {/* PTCO-LOGIN Label at the top */}
-            <div className="ptco-top-label" aria-label="PTCO Login">PTCO-LOGIN</div>
-
             {/* Left Hero */}
             <div className="login-hero">
-                <div className="logo-container">
-                    <img src={turismoLogo} alt="TurismoTrack" className="turismo-logo" />
+                <div className="login-hero-header">
+                    <img src={turismoLogo} alt="TurismoTrack Logo" className="turismo-logo" />
                 </div>
-                <img
-                    src={nuevaVizcayaMap}
-                    alt="Map of Nueva Vizcaya municipalities — TurismoTrack"
-                    className="login-hero-image"
-                />
+                <div className="login-map-container">
+                    <img
+                        src={nuevaVizcayaMap}
+                        alt="Map of Nueva Vizcaya Municipalities"
+                        className="login-hero-image"
+                    />
+                </div>
             </div>
 
             {/* Right Panel */}
             <div className="login-form-panel">
                 {isRegister ? (
                     /* Registration View */
-                    <div className="register-form-wrapper">
-                        <h1 className="welcome-title register-title">Provincial Tourism Office</h1>
-                        <p className="welcome-subtitle register-subtitle">Create your establishment account</p>
+                    <div className="login-form-wrapper">
+                        <div className="login-form-header">
+                            <h1 className="login-title welcome-title">PROVINCIAL TOURISM OFFICE</h1>
+                            <p className="login-subtitle welcome-subtitle">Create your establishment account</p>
+                        </div>
 
                         {serverError && (
                             <div className="register-alert-banner register-alert-error" role="alert">
@@ -774,8 +775,10 @@ export default function Login({ onLogin }) {
                 ) : (
                     /* Login View */
                     <div className={`login-form-wrapper ${shake ? 'shake-animation' : ''}`}>
-                        <h1 className="welcome-title">PROVINCIAL TOURISM OFFICE</h1>
-                        <p className="welcome-subtitle">Track and manage your tourism Data</p>
+                        <div className="login-form-header">
+                            <h1 className="login-title welcome-title">PROVINCIAL TOURISM OFFICE</h1>
+                            <p className="login-subtitle welcome-subtitle">Track and manage your tourism Data</p>
+                        </div>
 
                         {loginError && (
                             <div className="login-error-banner" role="alert">
@@ -784,7 +787,7 @@ export default function Login({ onLogin }) {
                         )}
 
                         {registrationSuccessMsg && (
-                            <div className="login-success-msg" style={{ marginBottom: 16 }}>
+                            <div className="login-success-msg">
                                 {registrationSuccessMsg}
                             </div>
                         )}
@@ -861,16 +864,15 @@ export default function Login({ onLogin }) {
                             </button>
                         </form>
 
-                        <a
-                            href="#register"
-                            onClick={() => navigateTo('#register')}
-                            className="footer-link"
-                        >
-                            Register as new Accommodation Establishment
-                        </a>
-                        <a href="#about" onClick={(e) => e.preventDefault()} className="footer-link">
-
-                        </a>
+                        <div className="login-footer-links">
+                            <a
+                                href="#register"
+                                onClick={() => navigateTo('#register')}
+                                className="footer-link"
+                            >
+                                Register as new Accommodation Establishment
+                            </a>
+                        </div>
                     </div>
                 )}
             </div>
