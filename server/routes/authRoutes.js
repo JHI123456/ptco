@@ -353,7 +353,32 @@ router.post("/login", async (req, res) => {
       return res.status(401).json({ error: "Maling password. Pakisubukang muli." });
     }
 
-    const role = user.role || "Municipality Admin";
+    const isProvincial =
+      user.role === "Provincial Admin" ||
+      user.role?.toLowerCase().includes("provincial") ||
+      user.role?.toLowerCase() === "ptco" ||
+      user.municipality === "Provincial";
+
+    const isMunicipal =
+      !isProvincial &&
+      (user.role === "Municipality Admin" ||
+        user.role?.toLowerCase().includes("municipal") ||
+        (!user.establishmentId && user.municipality));
+
+    const role = isProvincial
+      ? "Provincial Admin"
+      : (user.role || (isMunicipal ? "Municipality Admin" : "establishment"));
+
+    let portal = "establishment";
+    let portalUrl = "https://turismotrack-est.web.app";
+    if (isProvincial || role === "Provincial Admin") {
+      portal = "provincial";
+      portalUrl = "https://turismotrack-nv.web.app";
+    } else if (isMunicipal || role === "Municipality Admin") {
+      portal = "municipal";
+      portalUrl = "https://turismotrack-muni.web.app";
+    }
+
     const name = user.name || user.officeName || user.establishmentName || cleanEmail;
     const municipality = user.municipality || "Bayombong";
 
@@ -376,7 +401,8 @@ router.post("/login", async (req, res) => {
         email: cleanEmail,
         role,
         municipality,
-        portal: role.includes("Municipal") ? "municipal" : "establishment",
+        portal,
+        portalUrl,
       },
     });
   } catch (error) {

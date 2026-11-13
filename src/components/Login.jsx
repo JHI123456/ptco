@@ -4,6 +4,7 @@ import nuevaVizcayaMap from '../assets/Backround.png';
 import './Login.css';
 import { API_BASE_URL } from '../services/api';
 import ForgotPasswordView from './ForgotPasswordView';
+import { handleRoleBasedLoginRedirect } from '../services/authPortalRouter';
 
 // SVG Icons
 const MailIcon = () => (
@@ -115,6 +116,7 @@ export default function Login({ onLogin }) {
     const [isLoading, setIsLoading] = useState(false);
     const [errors, setErrors] = useState({});
     const [loginError, setLoginError] = useState('');
+    const [redirectNotice, setRedirectNotice] = useState(null);
     const [shake, setShake] = useState(false);
     const [registrationSuccessMsg, setRegistrationSuccessMsg] = useState('');
 
@@ -283,6 +285,8 @@ export default function Login({ onLogin }) {
         }
 
         setIsLoading(true);
+        setLoginError('');
+        setRedirectNotice(null);
 
         try {
             // Mahigpit na pagsusuri laban sa MongoDB Database
@@ -305,9 +309,16 @@ export default function Login({ onLogin }) {
                 return;
             }
 
-            // KUNG NAKAREHISTRO AT TAMA ANG CREDENTIALS LAMANG MAKAKAPASOK
-            if (onLogin) {
-                onLogin(data.user);
+            // Universal Role-Based Login Routing
+            const routing = handleRoleBasedLoginRedirect(data, onLogin);
+            if (routing.redirected) {
+                setRedirectNotice({
+                    role: routing.role,
+                    portalLabel: routing.portal?.shortLabel || 'Authorized',
+                });
+                setTimeout(() => {
+                    window.location.href = routing.targetUrl;
+                }, 750);
             }
         } catch {
             setIsLoading(false);
@@ -800,9 +811,25 @@ export default function Login({ onLogin }) {
                     /* Login View */
                     <div className={`login-form-wrapper ${shake ? 'shake-animation' : ''}`}>
                         <div className="login-form-header">
-                            <h1 className="login-title welcome-title">PROVINCIAL TOURISM OFFICE</h1>
-                            <p className="login-subtitle welcome-subtitle">Track and manage your tourism Data</p>
+                            <h1 className="login-title welcome-title">TURISMOTRACK NUEVA VIZCAYA</h1>
+                            <p className="login-subtitle welcome-subtitle">Official Tourism Operations & Analytics Portal</p>
+                            <div className="universal-role-badges" aria-label="Supported User Roles">
+                                <span className="role-pill">🏛️ Provincial (PTCO)</span>
+                                <span className="role-pill">🏢 Municipal Tourism</span>
+                                <span className="role-pill">🏨 Accommodation</span>
+                            </div>
+                            <p className="universal-login-hint">Universal Role-Based Login: Sign in with your registered account to access your designated workspace.</p>
                         </div>
+
+                        {redirectNotice && (
+                            <div className="login-redirect-banner" role="status">
+                                <div className="redirect-spinner"></div>
+                                <div>
+                                    <strong>Signing in as {redirectNotice.role}...</strong>
+                                    <p>Routing to {redirectNotice.portalLabel} Workspace...</p>
+                                </div>
+                            </div>
+                        )}
 
                         {loginError && (
                             <div className="login-error-banner" role="alert">

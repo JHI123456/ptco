@@ -3,11 +3,14 @@ import Login from './components/Login'
 import Dashboard from './components/Dashboard'
 import PWAInstallPrompt from './components/PWAInstallPrompt'
 import ErrorBoundary from './components/ErrorBoundary'
+import { consumeIncomingSession } from './services/authPortalRouter'
 
 function App() {
-  // Restore logged-in provincial user session if available
+  // Check for incoming cross-portal session or restore logged-in provincial user session
   const [user, setUser] = useState(() => {
     try {
+      const incoming = consumeIncomingSession('turismotrack_user', 'turismotrack_auth_token');
+      if (incoming?.user) return incoming.user;
       const stored = localStorage.getItem('turismotrack_user');
       return stored ? JSON.parse(stored) : null;
     } catch {
