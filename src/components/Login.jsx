@@ -121,6 +121,8 @@ export default function Login({ onLogin }) {
     const [registrationSuccessMsg, setRegistrationSuccessMsg] = useState('');
 
     // Register Form State
+    const [registerType, setRegisterType] = useState('establishment'); // 'establishment' or 'municipal'
+    const [regOfficeName, setRegOfficeName] = useState('');
     const [establishmentName, setEstablishmentName] = useState('');
     const [establishmentType, setEstablishmentType] = useState('');
     const [municipality, setMunicipality] = useState('');
@@ -332,19 +334,26 @@ export default function Login({ onLogin }) {
     const validateRegisterForm = () => {
         const newErrors = {};
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        // Password at least 8 characters with at least one letter and one number
-        const passwordRegex = /^(?=.*[a-zA-Z])(?=.*\d).{8,}$/;
+        // Password at least 6 characters with at least one letter and one number
+        const passwordRegex = /^(?=.*[a-zA-Z])(?=.*\d).{6,}$/;
 
-        if (!establishmentName.trim()) {
-            newErrors.establishmentName = 'Establishment name is required';
-        }
-
-        if (!establishmentType) {
-            newErrors.establishmentType = 'Establishment type is required';
-        }
-
-        if (!municipality) {
-            newErrors.municipality = 'Municipality is required';
+        if (registerType === 'municipal') {
+            if (!municipality) {
+                newErrors.municipality = 'Municipality is required';
+            }
+            if (!regOfficeName.trim()) {
+                newErrors.officeName = 'Name of Municipal Tourism Office is required';
+            }
+        } else {
+            if (!establishmentName.trim()) {
+                newErrors.establishmentName = 'Establishment name is required';
+            }
+            if (!establishmentType) {
+                newErrors.establishmentType = 'Establishment type is required';
+            }
+            if (!municipality) {
+                newErrors.municipality = 'Municipality is required';
+            }
         }
 
         if (!registerEmail.trim()) {
@@ -356,7 +365,7 @@ export default function Login({ onLogin }) {
         if (!registerPassword) {
             newErrors.password = 'Password is required';
         } else if (!passwordRegex.test(registerPassword)) {
-            newErrors.password = 'Password must be at least 8 characters, including a letter and a number';
+            newErrors.password = 'Password must be at least 6 characters, including a letter and a number';
         }
 
         if (!confirmPassword) {
@@ -385,18 +394,29 @@ export default function Login({ onLogin }) {
         setIsSubmitting(true);
 
         try {
-            const response = await fetch(`${API_BASE_URL}/auth/register`, {
+            const isMuni = registerType === 'municipal';
+            const endpoint = isMuni ? `${API_BASE_URL}/auth/register-municipal` : `${API_BASE_URL}/auth/register`;
+            const payload = isMuni
+                ? {
+                    municipality: municipality.trim(),
+                    officeName: regOfficeName.trim() || `${municipality.trim()} Municipal Tourism Office`,
+                    email: registerEmail.trim(),
+                    password: registerPassword,
+                }
+                : {
+                    establishmentName: establishmentName.trim(),
+                    establishmentType,
+                    municipality: municipality.trim(),
+                    email: registerEmail.trim(),
+                    password: registerPassword,
+                };
+
+            const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({
-                    establishmentName: establishmentName.trim(),
-                    establishmentType,
-                    municipality,
-                    email: registerEmail.trim(),
-                    password: registerPassword,
-                }),
+                body: JSON.stringify(payload),
             });
 
             const data = await response.json().catch(() => null);
@@ -408,17 +428,17 @@ export default function Login({ onLogin }) {
                 return;
             }
 
-            const successMsg = data?.message || 'Account created successfully! Switching to sign in...';
+            const successMsg = data?.message || `${isMuni ? 'Municipal Tourism Office' : 'Accommodation establishment'} registered successfully! Switching to sign in...`;
             setSuccessMessage(successMsg);
-            setRegistrationSuccessMsg('Account created successfully! Please sign in with your email and password.');
+            setRegistrationSuccessMsg(`Account created successfully! Please sign in with ${registerEmail.trim()}.`);
             setIsSubmitting(false);
 
             try {
                 if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
                     const ch = new BroadcastChannel('turismotrack_realtime');
                     ch.postMessage({
-                        type: 'establishment:registered',
-                        data: data?.establishment || { name: establishmentName.trim(), municipality },
+                        type: isMuni ? 'municipal:registered' : 'establishment:registered',
+                        data: isMuni ? data?.lgu || { municipality } : data?.establishment || { name: establishmentName.trim(), municipality },
                     });
                     ch.close();
                 }
@@ -427,6 +447,7 @@ export default function Login({ onLogin }) {
             // Reset register fields
             setEstablishmentName('');
             setEstablishmentType('');
+            setRegOfficeName('');
             setMunicipality('');
             setRegisterEmail('');
             setRegisterPassword('');
@@ -482,8 +503,49 @@ export default function Login({ onLogin }) {
                     /* Registration View */
                     <div className="login-form-wrapper">
                         <div className="login-form-header">
-                            <h1 className="login-title welcome-title">PROVINCIAL TOURISM OFFICE</h1>
-                            <p className="login-subtitle welcome-subtitle">Create your establishment account</p>
+                            <h1 className="login-title welcome-title">
+                                {registerType === 'municipal' ? 'MUNICIPAL TOURISM REGISTRATION' : 'ESTABLISHMENT REGISTRATION'}
+                            </h1>
+                            <p className="login-subtitle welcome-subtitle">
+                                {registerType === 'municipal'
+                                    ? 'Create an official tourism account for your municipality'
+                                    : 'Create your accommodation or attraction account'}
+                            </p>
+                        </div>
+
+                        {/* Switcher Tabs */}
+                        <div className="register-type-tabs" role="tablist">
+                            <button
+                                type="button"
+                                className={`register-tab-btn ${registerType === 'establishment' ? 'active' : ''}`}
+                                onClick={() => {
+                                    setRegisterType('establishment');
+                                    setServerError('');
+                                    setSuccessMessage('');
+                                    setRegisterErrors({});
+                                }}
+                                role="tab"
+                                aria-selected={registerType === 'establishment'}
+                            >
+                                🏨 Accommodation
+                            </button>
+                            <button
+                                type="button"
+                                className={`register-tab-btn ${registerType === 'municipal' ? 'active' : ''}`}
+                                onClick={() => {
+                                    setRegisterType('municipal');
+                                    setServerError('');
+                                    setSuccessMessage('');
+                                    setRegisterErrors({});
+                                    if (municipality && (!regOfficeName || regOfficeName.includes('Municipal Tourism Office'))) {
+                                        setRegOfficeName(`${municipality} Municipal Tourism Office`);
+                                    }
+                                }}
+                                role="tab"
+                                aria-selected={registerType === 'municipal'}
+                            >
+                                🏢 Municipal Tourism
+                            </button>
                         </div>
 
                         {serverError && (
@@ -499,90 +561,95 @@ export default function Login({ onLogin }) {
                         )}
 
                         <form className="register-form" onSubmit={handleRegisterSubmit} noValidate>
-                            {/* ESTABLISHMENT NAME */}
-                            <div className="register-form-group">
-                                <label className="register-field-label" htmlFor="establishmentName">
-                                    ESTABLISHMENT NAME
-                                </label>
-                                <input
-                                    id="establishmentName"
-                                    name="establishmentName"
-                                    type="text"
-                                    className={`register-input ${registerErrors.establishmentName ? 'input-has-error' : ''}`}
-                                    placeholder="Enter establishment name"
-                                    value={establishmentName}
-                                    onChange={(e) => {
-                                        setEstablishmentName(e.target.value);
-                                        if (registerErrors.establishmentName) {
-                                            setRegisterErrors((prev) => ({ ...prev, establishmentName: undefined }));
-                                        }
-                                    }}
-                                    disabled={isSubmitting}
-                                    required
-                                />
-                                {registerErrors.establishmentName && (
-                                    <span className="register-error-msg">{registerErrors.establishmentName}</span>
-                                )}
-                            </div>
+                            {/* ESTABLISHMENT FIELDS */}
+                            {registerType === 'establishment' && (
+                                <>
+                                    {/* ESTABLISHMENT NAME */}
+                                    <div className="register-form-group">
+                                        <label className="register-field-label" htmlFor="establishmentName">
+                                            ESTABLISHMENT NAME
+                                        </label>
+                                        <input
+                                            id="establishmentName"
+                                            name="establishmentName"
+                                            type="text"
+                                            className={`register-input ${registerErrors.establishmentName ? 'input-has-error' : ''}`}
+                                            placeholder="Enter establishment name"
+                                            value={establishmentName}
+                                            onChange={(e) => {
+                                                setEstablishmentName(e.target.value);
+                                                if (registerErrors.establishmentName) {
+                                                    setRegisterErrors((prev) => ({ ...prev, establishmentName: undefined }));
+                                                }
+                                            }}
+                                            disabled={isSubmitting}
+                                            required
+                                        />
+                                        {registerErrors.establishmentName && (
+                                            <span className="register-error-msg">{registerErrors.establishmentName}</span>
+                                        )}
+                                    </div>
 
-                            {/* ESTABLISHMENT TYPE (Custom Dropdown) */}
-                            <div className="register-form-group">
-                                <label className="register-field-label" id="establishmentTypeLabel">
-                                    ESTABLISHMENT TYPE
-                                </label>
-                                <div className="register-dropdown-wrapper" ref={dropdownRef}>
-                                    <button
-                                        type="button"
-                                        ref={dropdownTriggerRef}
-                                        className={`register-dropdown-trigger ${isDropdownOpen ? 'open' : ''} ${registerErrors.establishmentType ? 'input-has-error' : ''}`}
-                                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                                        onKeyDown={handleDropdownKeyDown}
-                                        aria-haspopup="listbox"
-                                        aria-expanded={isDropdownOpen}
-                                        aria-labelledby="establishmentTypeLabel"
-                                        aria-controls="establishment-type-listbox"
-                                        disabled={isSubmitting}
-                                    >
-                                        <span className={establishmentType ? 'register-dropdown-value' : 'register-dropdown-placeholder'}>
-                                            {establishmentType || 'Select establishment type'}
-                                        </span>
-                                        <CaretIcon open={isDropdownOpen} />
-                                    </button>
+                                    {/* ESTABLISHMENT TYPE (Custom Dropdown) */}
+                                    <div className="register-form-group">
+                                        <label className="register-field-label" id="establishmentTypeLabel">
+                                            ESTABLISHMENT TYPE
+                                        </label>
+                                        <div className="register-dropdown-wrapper" ref={dropdownRef}>
+                                            <button
+                                                type="button"
+                                                ref={dropdownTriggerRef}
+                                                className={`register-dropdown-trigger ${isDropdownOpen ? 'open' : ''} ${registerErrors.establishmentType ? 'input-has-error' : ''}`}
+                                                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                                                onKeyDown={handleDropdownKeyDown}
+                                                aria-haspopup="listbox"
+                                                aria-expanded={isDropdownOpen}
+                                                aria-labelledby="establishmentTypeLabel"
+                                                aria-controls="establishment-type-listbox"
+                                                disabled={isSubmitting}
+                                            >
+                                                <span className={establishmentType ? 'register-dropdown-value' : 'register-dropdown-placeholder'}>
+                                                    {establishmentType || 'Select establishment type'}
+                                                </span>
+                                                <CaretIcon open={isDropdownOpen} />
+                                            </button>
 
-                                    {isDropdownOpen && (
-                                        <ul
-                                            id="establishment-type-listbox"
-                                            className="register-dropdown-menu"
-                                            role="listbox"
-                                            aria-labelledby="establishmentTypeLabel"
-                                        >
-                                            {ESTABLISHMENT_TYPES.map((type, idx) => (
-                                                <li
-                                                    key={type}
-                                                    role="option"
-                                                    aria-selected={establishmentType === type}
-                                                    className={`register-dropdown-item ${establishmentType === type ? 'selected' : ''} ${focusedOptionIndex === idx ? 'focused' : ''}`}
-                                                    onClick={() => {
-                                                        setEstablishmentType(type);
-                                                        if (registerErrors.establishmentType) {
-                                                            setRegisterErrors((prev) => ({ ...prev, establishmentType: undefined }));
-                                                        }
-                                                        setIsDropdownOpen(false);
-                                                        setFocusedOptionIndex(-1);
-                                                    }}
-                                                    onMouseEnter={() => setFocusedOptionIndex(idx)}
+                                            {isDropdownOpen && (
+                                                <ul
+                                                    id="establishment-type-listbox"
+                                                    className="register-dropdown-menu"
+                                                    role="listbox"
+                                                    aria-labelledby="establishmentTypeLabel"
                                                 >
-                                                    {type}
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    )}
-                                </div>
+                                                    {ESTABLISHMENT_TYPES.map((type, idx) => (
+                                                        <li
+                                                            key={type}
+                                                            role="option"
+                                                            aria-selected={establishmentType === type}
+                                                            className={`register-dropdown-item ${establishmentType === type ? 'selected' : ''} ${focusedOptionIndex === idx ? 'focused' : ''}`}
+                                                            onClick={() => {
+                                                                setEstablishmentType(type);
+                                                                if (registerErrors.establishmentType) {
+                                                                    setRegisterErrors((prev) => ({ ...prev, establishmentType: undefined }));
+                                                                }
+                                                                setIsDropdownOpen(false);
+                                                                setFocusedOptionIndex(-1);
+                                                            }}
+                                                            onMouseEnter={() => setFocusedOptionIndex(idx)}
+                                                        >
+                                                            {type}
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            )}
+                                        </div>
 
-                                {registerErrors.establishmentType && (
-                                    <span className="register-error-msg">{registerErrors.establishmentType}</span>
-                                )}
-                            </div>
+                                        {registerErrors.establishmentType && (
+                                            <span className="register-error-msg">{registerErrors.establishmentType}</span>
+                                        )}
+                                    </div>
+                                </>
+                            )}
 
                             {/* MUNICIPALITY (Custom Dropdown) */}
                             <div className="register-form-group">
@@ -627,6 +694,9 @@ export default function Login({ onLogin }) {
                                                     className={`register-dropdown-item ${municipality === muni ? 'selected' : ''} ${focusedMuniIndex === idx ? 'focused' : ''}`}
                                                     onClick={() => {
                                                         setMunicipality(muni);
+                                                        if (registerType === 'municipal' && (!regOfficeName || regOfficeName.includes('Municipal Tourism Office'))) {
+                                                            setRegOfficeName(`${muni} Municipal Tourism Office`);
+                                                        }
                                                         if (registerErrors.municipality) {
                                                             setRegisterErrors((prev) => ({ ...prev, municipality: undefined }));
                                                         }
@@ -646,6 +716,34 @@ export default function Login({ onLogin }) {
                                     <span className="register-error-msg">{registerErrors.municipality}</span>
                                 )}
                             </div>
+
+                            {/* MUNICIPAL OFFICE NAME (When Municipal selected) */}
+                            {registerType === 'municipal' && (
+                                <div className="register-form-group">
+                                    <label className="register-field-label" htmlFor="regOfficeName">
+                                        NAME OF MUNICIPAL TOURISM OFFICE
+                                    </label>
+                                    <input
+                                        id="regOfficeName"
+                                        name="officeName"
+                                        type="text"
+                                        className={`register-input ${registerErrors.officeName ? 'input-has-error' : ''}`}
+                                        placeholder="e.g. Solano Municipal Tourism Office"
+                                        value={regOfficeName}
+                                        onChange={(e) => {
+                                            setRegOfficeName(e.target.value);
+                                            if (registerErrors.officeName) {
+                                                setRegisterErrors((prev) => ({ ...prev, officeName: undefined }));
+                                            }
+                                        }}
+                                        disabled={isSubmitting}
+                                        required
+                                    />
+                                    {registerErrors.officeName && (
+                                        <span className="register-error-msg">{registerErrors.officeName}</span>
+                                    )}
+                                </div>
+                            )}
 
                             {/* EMAIL ADDRESS */}
                             <div className="register-form-group">
@@ -791,7 +889,11 @@ export default function Login({ onLogin }) {
 
                             {/* Full-width CREATE ACCOUNT Button in burnt orange */}
                             <button type="submit" className="register-submit-btn" disabled={isSubmitting}>
-                                {isSubmitting ? 'Creating account...' : 'CREATE ACCOUNT'}
+                                {isSubmitting
+                                    ? 'Creating account...'
+                                    : registerType === 'municipal'
+                                        ? 'REGISTER MUNICIPAL TOURISM'
+                                        : 'CREATE ACCOUNT'}
                             </button>
                         </form>
 
@@ -925,14 +1027,42 @@ export default function Login({ onLogin }) {
                             </button>
                         </form>
 
-                        <div className="login-footer-links">
-                            <a
-                                href="#register"
-                                onClick={() => navigateTo('#register')}
-                                className="footer-link"
-                            >
-                                Register as new Accommodation Establishment
-                            </a>
+                        <div className="login-register-options">
+                            <span className="register-options-label">Don't have an official account yet?</span>
+                            <div className="register-actions-row">
+                                <a
+                                    href="#register"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        setRegisterType('establishment');
+                                        setServerError('');
+                                        setSuccessMessage('');
+                                        setRegisterErrors({});
+                                        navigateTo('#register');
+                                    }}
+                                    className="register-choice-link"
+                                >
+                                    🏨 Register Accommodation
+                                </a>
+                                <span className="register-choice-separator">•</span>
+                                <a
+                                    href="#register"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        setRegisterType('municipal');
+                                        setServerError('');
+                                        setSuccessMessage('');
+                                        setRegisterErrors({});
+                                        if (municipality && (!regOfficeName || regOfficeName.includes('Municipal Tourism Office'))) {
+                                            setRegOfficeName(`${municipality} Municipal Tourism Office`);
+                                        }
+                                        navigateTo('#register');
+                                    }}
+                                    className="register-choice-link"
+                                >
+                                    🏢 Register Municipal Tourism
+                                </a>
+                            </div>
                         </div>
                     </div>
                 )}

@@ -192,6 +192,86 @@
     color: #3b82f6;
 }
 
+/* Registration Choice in Login View */
+.login-register-options {
+    margin-top: 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    text-align: center;
+}
+
+.register-options-label {
+    font-size: 12.5px;
+    color: #8a8378;
+    font-weight: 500;
+}
+
+.register-actions-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.register-choice-link {
+    font-size: 13px;
+    font-weight: 700;
+    color: #E07B39;
+    text-decoration: none;
+    transition: color 0.15s, transform 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.register-choice-link:hover {
+    color: #c25e1e;
+    text-decoration: underline;
+}
+
+.register-choice-separator {
+    color: #cbd5e1;
+    font-size: 13px;
+}
+
+/* Registration Tabs in Register View */
+.register-type-tabs {
+    display: flex;
+    background: #E8F0F5;
+    padding: 4px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    gap: 4px;
+    border: 1px solid #d0e0ea;
+}
+
+.register-tab-btn {
+    flex: 1;
+    padding: 9px 12px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #526b7c;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.register-tab-btn.active {
+    background: #ffffff;
+    color: #1e3a8a;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+
 
 /* Form Layout */
 .login-form,
