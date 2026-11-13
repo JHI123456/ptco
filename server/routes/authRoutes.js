@@ -312,20 +312,45 @@ router.post("/register", async (req, res) => {
 // POST /api/auth/login - Universal Login Endpoint
 router.post("/login", async (req, res) => {
   try {
-    const { email, password } = req.body;
-    if (!email || !password) {
-      return res.status(400).json({ error: "Email and password are required." });
+    const { email, password, isGoogleAuth } = req.body;
+    if (!email || (!password && !isGoogleAuth)) {
+      return res.status(400).json({ error: "Email address is required." });
     }
 
     const cleanEmail = email.trim().toLowerCase();
-    const hashedPassword = crypto.createHash("sha256").update(password).digest("hex");
+    const hashedPassword = password ? crypto.createHash("sha256").update(password).digest("hex") : "";
     const db = mongoose.connection.db;
 
     if (!db) {
       return res.status(503).json({ error: "Database not connected. Please ensure MongoDB is running." });
     }
 
-    const user = await db.collection("users").findOne({ email: cleanEmail });
+    let user = await db.collection("users").findOne({ email: cleanEmail });
+
+    if (!user && isGoogleAuth) {
+      const NV_MUNIS = ["Alfonso Castañeda", "Ambaguio", "Aritao", "Bagabag", "Bambang", "Bayombong", "Diadi", "Dupax del Norte", "Dupax del Sur", "Kasibu", "Kayapa", "Quezon", "Santa Fe", "Solano", "Villaverde"];
+      const matchedMuni = NV_MUNIS.find((m) => cleanEmail.includes(m.toLowerCase().replace(/[^a-z0-9]/g, "")));
+      const isProv = cleanEmail.includes("admin") || cleanEmail.includes("provincial") || cleanEmail.includes("ptco");
+      const isMuni = Boolean(matchedMuni || cleanEmail.includes("tourism") || cleanEmail.includes("muni"));
+      const assignedRole = isProv ? "Provincial Admin" : (isMuni ? "Municipality Admin" : "establishment");
+      const assignedMuni = matchedMuni || (isProv ? "Provincial" : "Bayombong");
+      const assignedName = req.body.name || (isProv ? "PTCAO Provincial Tourism" : (isMuni ? `${assignedMuni} Municipal Tourism Office` : cleanEmail.split("@")[0]));
+
+      const newUser = {
+        name: assignedName,
+        establishmentName: assignedName,
+        establishmentCategory: "Accommodation",
+        establishmentSubType: "Hotel / Resort",
+        municipality: assignedMuni,
+        email: cleanEmail,
+        role: assignedRole,
+        password: crypto.createHash("sha256").update("google_oauth_verified").digest("hex"),
+        authProvider: "google",
+        createdAt: new Date(),
+      };
+      const result = await db.collection("users").insertOne(newUser);
+      user = { ...newUser, _id: result.insertedId };
+    }
 
     if (!user) {
       await logAudit({
@@ -341,7 +366,7 @@ router.post("/login", async (req, res) => {
       });
     }
 
-    if (user.password && user.password !== hashedPassword && user.password !== password) {
+    if (!isGoogleAuth && user.password && user.password !== hashedPassword && user.password !== password) {
       await logAudit({
         user: { email: cleanEmail, name: user.name || user.officeName || user.establishmentName, role: user.role, municipality: user.municipality },
         action: "USER_LOGIN",

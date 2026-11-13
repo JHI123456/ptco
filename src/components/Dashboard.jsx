@@ -32,7 +32,18 @@ const MONTH_NAMES = [
 ];
 
 const Dashboard = ({ user, onLogout }) => {
-  const [activeTab, setActiveTab] = useState("Inbox"); // Default to Inbox to match reference screenshot
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window !== "undefined") {
+      const hash = window.location.hash.replace("#", "").toLowerCase();
+      if (hash.includes("establishment")) return "Establishments";
+      if (hash.includes("report")) return "Visitor Reports";
+      if (hash.includes("municipal")) return "Municipalities";
+      if (hash.includes("user")) return "Users";
+      if (hash.includes("audit")) return "Audit Logs";
+      if (hash.includes("dashboard")) return "Dashboard";
+    }
+    return "Inbox";
+  });
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userSearch, setUserSearch] = useState("");
   const [officers, setOfficers] = useState([]);

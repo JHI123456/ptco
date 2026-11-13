@@ -348,10 +348,12 @@
 
 .audit-table-responsive {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .audit-table {
   width: 100%;
+  min-width: 820px;
   border-collapse: collapse;
   font-size: 0.86rem;
   text-align: left;
@@ -653,27 +655,106 @@
   color: #64748b;
 }
 
-/* RESPONSIVE */
+/* RESPONSIVE DESIGN */
 @media (max-width: 1024px) {
+  .audit-log-page {
+    padding: 20px 24px 36px;
+  }
   .audit-kpi-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+  .audit-toolbar {
+    gap: 12px;
+  }
+}
+
+@media (max-width: 768px) {
+  .audit-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .audit-search-box {
+    width: 100%;
+    min-width: 100%;
+  }
+  .audit-filters-group {
+    width: 100%;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+  }
+  .audit-select-wrap {
+    width: 100%;
+  }
+  .audit-select-wrap select {
+    width: 100%;
+  }
+  .audit-btn-reset {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 10px;
   }
 }
 
 @media (max-width: 640px) {
   .audit-log-page {
-    padding: 16px;
-  }
-  .audit-kpi-grid {
-    grid-template-columns: 1fr;
+    padding: 14px 14px 28px;
   }
   .audit-header {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
+    gap: 14px;
+  }
+  .audit-title-block {
+    gap: 12px;
+  }
+  .audit-icon-wrap {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+  }
+  .audit-title-block h1 {
+    font-size: 1.25rem;
+  }
+  .audit-title-block p {
+    font-size: 0.8rem;
   }
   .audit-actions {
     width: 100%;
-    justify-content: flex-start;
+    display: flex;
+    gap: 8px;
+  }
+  .audit-actions .audit-btn {
+    flex: 1;
+    justify-content: center;
+    padding: 9px 12px;
+    font-size: 0.82rem;
+  }
+  .audit-kpi-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .audit-kpi-card {
+    padding: 14px 16px;
+  }
+  .audit-filters-group {
+    grid-template-columns: 1fr;
+  }
+  .table-header-meta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 12px 16px;
+  }
+  .audit-pagination {
+    flex-direction: column;
+    gap: 10px;
+    text-align: center;
+    padding: 12px 16px;
+  }
+  .audit-pagination .page-btn {
+    padding: 8px 16px;
   }
 }
 

@@ -9,73 +9,12 @@
 // 6. Resilient Offline Authentication for Official Admins (admin@gmail.com, tourism@bayombong.gov.ph)
 // ============================================================================
 
-const CURRENT_CACHE_VERSION = 'tt_sync_zen_hotel_oct2026_v21';
+const CURRENT_CACHE_VERSION = 'tt_clean_dynamic_v1';
 
 function seedPTCOZenHotelDefaults() {
-  if (typeof window === 'undefined' || typeof localStorage === 'undefined') return;
-  try {
-    const zenInboxItem = {
-      id: 'inbox-zen-dae1b-oct2026',
-      formType: 'FORM A DAE-1B',
-      subject: 'FORM A DAE-1B: Zen Hotel Bayombong (October 2026)',
-      sender: 'Zen Hotel Bayombong',
-      senderName: 'Zen Hotel Bayombong',
-      establishmentName: 'Zen Hotel Bayombong',
-      municipality: 'Bayombong',
-      province: 'Nueva Vizcaya',
-      status: 'approved',
-      period: 'October 2026',
-      reportingPeriod: 'October 2026',
-      submittedAt: '2026-11-01T09:00:00.000Z',
-      reviewedAt: '2026-11-01T10:00:00.000Z',
-      reviewedBy: 'Bayombong Tourism Officer',
-      visitors: 5182,
-      totalGuests: 5182,
-      totalFilipino: 5165,
-      totalForeign: 17,
-      roomsOccupied: 2229,
-      remarks: 'Official October 2026 DAE-1B verified. Total: 5,182 guests (5,165 Filipino, 17 Foreign).',
-      formData: {
-        establishmentName: 'Zen Hotel Bayombong',
-        municipality: 'Bayombong',
-        province: 'Nueva Vizcaya',
-        month: 10,
-        reportMonth: 10,
-        reportMonthName: 'October',
-        year: 2026,
-        reportYear: 2026,
-        reportingPeriod: 'October 2026',
-        totalFilipino: 5165,
-        filipinoNat: 5165,
-        foreignNatInPH: 0,
-        totalPhilippineResidents: 5165,
-        totalForeign: 17,
-        totalNonPhilippineResidents: 17,
-        foreignBreakdown: { China: 2, India: 11, Iran: 1, USA: 3 },
-        grandTotal: 5182,
-        totalRoomsOccupied: 2229,
-        roomsOccupied: 2229,
-        roomsAvailable: 2450,
-        totalGuestNights: 5182,
-        alos: 1.0,
-        male: { m: 2686, nonPhil: 9, total: 2695 },
-        female: { f: 2479, nonPhil: 8, total: 2487 },
-        preparedBy: {
-          name: 'Sallie Fabian',
-          designation: 'Duty Manager',
-          contactNumber: '(078) 392-0545 / 0917 123 4567',
-          date: '2026-10-31',
-        },
-      },
-    };
-
-    const inboxItems = JSON.parse(localStorage.getItem('turismotrack_inbox_items') || '[]');
-    const filteredInbox = inboxItems.filter((i) => !String(i.sender || i.establishmentName || '').toLowerCase().includes('zen'));
-    filteredInbox.unshift(zenInboxItem);
-    localStorage.setItem('turismotrack_inbox_items', JSON.stringify(filteredInbox));
-  } catch (err) {
-    console.warn('Error seeding PTCO Zen Hotel defaults:', err);
-  }
+  // Purely dynamic mode: No pre-seeded establishments.
+  // Establishments only appear once genuinely registered.
+  return;
 }
 
 if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {

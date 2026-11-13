@@ -23,22 +23,7 @@ export async function fetchLGUs(params = {}) {
     if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
     const resData = await res.json();
     const items = Array.isArray(resData) ? resData : (Array.isArray(resData?.data) ? resData.data : []);
-    return items.map((l) => {
-      const copy = { ...l };
-      const nameLower = (copy.name || copy.municipality || '').toLowerCase();
-      if (nameLower.includes('bayombong')) {
-        // Reconcile official deduplicated count: 5,592 (Zen Hotel 5,182 + Wilwin Hotel 410)
-        copy.totalVisitors = 5592;
-        copy.visitorsThisMonth = 0;
-        if (copy.intel) {
-          copy.intel = {
-            ...copy.intel,
-            currentHeadcount: "5,592 / 1,800",
-          };
-        }
-      }
-      return copy;
-    });
+    return items.map((l) => ({ ...l }));
   } catch (err) {
     console.warn("fetchLGUs error:", err.message);
     return [];
@@ -64,20 +49,7 @@ export async function fetchEstablishments(params = {}) {
     if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
     const resData = await res.json();
     const items = Array.isArray(resData) ? resData : (Array.isArray(resData?.data) ? resData.data : []);
-    return items.map((est) => {
-      const copy = { ...est };
-      const nameLower = (copy.name || '').toLowerCase();
-      if (nameLower.includes('zen')) {
-        copy.totalVisitors = 5182;
-        copy.visitorsThisMonth = 0;
-      } else if (nameLower.includes('wilwin') || nameLower.includes('willwin')) {
-        copy.totalVisitors = 410;
-        copy.visitorsThisMonth = 0;
-      } else {
-        copy.visitorsThisMonth = 0;
-      }
-      return copy;
-    });
+    return items.map((est) => ({ ...est }));
   } catch (err) {
     console.warn("fetchEstablishments error:", err.message);
     return [];

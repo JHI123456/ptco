@@ -79,23 +79,36 @@ export default function Login({ onLogin }) {
 
     useEffect(() => {
         if (typeof window !== 'undefined') {
-            if (
-                !window.location.hash ||
-                window.location.hash === '#register' ||
-                window.location.hash === '#forgot' ||
-                window.location.hash === ''
-            ) {
+            const h = window.location.hash;
+            if (!h || h === '') {
                 window.location.hash = '#login';
                 setCurrentHash('#login');
             } else {
-                setCurrentHash(window.location.hash);
+                if (h === '#register-municipal') {
+                    setRegisterType('municipal');
+                    setCurrentHash('#register');
+                } else if (h === '#register-establishment') {
+                    setRegisterType('establishment');
+                    setCurrentHash('#register');
+                } else {
+                    setCurrentHash(h);
+                }
             }
         }
     }, []);
 
     useEffect(() => {
         const handleHashChange = () => {
-            setCurrentHash(window.location.hash || '#login');
+            const h = window.location.hash || '#login';
+            if (h === '#register-municipal') {
+                setRegisterType('municipal');
+                setCurrentHash('#register');
+            } else if (h === '#register-establishment') {
+                setRegisterType('establishment');
+                setCurrentHash('#register');
+            } else {
+                setCurrentHash(h);
+            }
         };
         window.addEventListener('hashchange', handleHashChange);
         return () => window.removeEventListener('hashchange', handleHashChange);
@@ -920,7 +933,6 @@ export default function Login({ onLogin }) {
                                 <span className="role-pill">🏢 Municipal Tourism</span>
                                 <span className="role-pill">🏨 Accommodation</span>
                             </div>
-                            <p className="universal-login-hint">Universal Role-Based Login: Sign in with your registered account to access your designated workspace.</p>
                         </div>
 
                         {redirectNotice && (

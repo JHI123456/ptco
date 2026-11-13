@@ -476,3 +476,4 @@ export default function ForgotPasswordView({
         </div>
     );
 }
+
