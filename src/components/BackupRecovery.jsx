@@ -484,49 +484,6 @@ export default function BackupRecovery({ user, portalRole = 'Establishment' }) {
         </div>
       )}
 
-      {/* TOP SYSTEM HEALTH BANNER */}
-      <div className="backup-hero-banner">
-        <div className="hero-text-col">
-          <div className="hero-tag-row">
-            <span className="hero-badge live">
-              <span className="pulse-dot" /> LIVE CLOUD REPLICATION ACTIVE
-            </span>
-            <span className="hero-badge role">{portalRole} Portal</span>
-          </div>
-          <h2 className="hero-title">Database Backup &amp; Disaster Recovery Management</h2>
-          <p className="hero-desc">
-            Continuous Point-In-Time Recovery (PITR), multi-region MongoDB Atlas replica synchronization, and automated offline-to-cloud resilience engine.
-          </p>
-        </div>
-
-        <div className="hero-stats-grid">
-          <div className="hero-stat-card">
-            <div className="stat-label">Cloud Primary Cluster</div>
-            <div className="stat-value green">MongoDB Atlas (Replica)</div>
-            <div className="stat-sub">3-Node Auto-Failover</div>
-          </div>
-          <div className="hero-stat-card">
-            <div className="stat-label">Recovery Point (RPO)</div>
-            <div className="stat-value">&lt; 5 Minutes</div>
-            <div className="stat-sub">Continuous PITR Log</div>
-          </div>
-          <div className="hero-stat-card">
-            <div className="stat-label">Recovery Time (RTO)</div>
-            <div className="stat-value">&lt; 10 Minutes</div>
-            <div className="stat-sub">One-click restore</div>
-          </div>
-          <div className="hero-stat-card">
-            <div className="stat-label">Offline Queue Backlog</div>
-            <div className={`stat-value ${offlineQueueCount > 0 ? 'amber' : 'green'}`}>
-              {offlineQueueCount} {offlineQueueCount === 1 ? 'Record' : 'Records'}
-            </div>
-            <div className="stat-sub">
-              {offlineQueueCount === 0 ? 'All stores synchronized' : 'Awaiting network sync'}
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* 4 CORE BACKUP ACTIONS GRID */}
       <div className="backup-action-cards-grid">
         {/* CARD 1: AUTOMATED CLOUD BACKUP */}
