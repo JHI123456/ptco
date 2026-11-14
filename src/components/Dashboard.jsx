@@ -175,39 +175,28 @@ const Dashboard = ({ user, onLogout }) => {
     let attractions = 0;
 
     establishments.forEach((e) => {
-      const type = (e.establishmentType || e.type || "").toLowerCase().trim();
       const cat = (e.category || "").toLowerCase().trim();
+      const type = (e.establishmentType || e.type || "").toLowerCase().trim();
       const name = (e.name || "").toLowerCase().trim();
-      const combined = `${type} ${cat} ${name}`;
 
-      if (type === "hotel" || (combined.includes("hotel") && !combined.includes("resort"))) {
-        hotel++;
-      } else if (type === "resort" || combined.includes("resort")) {
-        resort++;
-      } else if (type === "mabuhay accommodation" || combined.includes("mabuhay")) {
+      // Prioritize the explicitly chosen Category / Type, rather than the brand name!
+      if (cat.includes("mabuhay") || type.includes("mabuhay")) {
         mabuhay++;
-      } else if (type === "homestay" || combined.includes("homestay") || combined.includes("home stay")) {
+      } else if (cat.includes("resort") || type.includes("resort")) {
+        resort++;
+      } else if (cat.includes("homestay") || type.includes("homestay") || cat.includes("home stay")) {
         homestay++;
-      } else if (
-        type === "farm tourism camps" ||
-        combined.includes("farm") ||
-        combined.includes("camp") ||
-        combined.includes("agri")
-      ) {
+      } else if (cat.includes("farm") || cat.includes("camp") || type.includes("farm") || type.includes("camp")) {
         farmCamps++;
-      } else if (
-        type === "tourism attractions" ||
-        combined.includes("attraction") ||
-        combined.includes("tour") ||
-        combined.includes("eco") ||
-        combined.includes("park") ||
-        combined.includes("reserve") ||
-        combined.includes("heritage") ||
-        combined.includes("cave") ||
-        combined.includes("ridge")
-      ) {
+      } else if (cat.includes("attraction") || cat.includes("tour") || cat.includes("eco") || type.includes("attraction")) {
         attractions++;
-      } else if (combined.includes("inn") || combined.includes("lodge") || combined.includes("stay")) {
+      } else if (cat.includes("hotel") || type.includes("hotel") || cat.includes("inn") || cat.includes("lodge") || cat.includes("stay")) {
+        hotel++;
+      } else if (name.includes("mabuhay")) {
+        mabuhay++;
+      } else if (name.includes("resort")) {
+        resort++;
+      } else if (name.includes("hotel") || name.includes("inn") || name.includes("lodge")) {
         hotel++;
       } else {
         attractions++;

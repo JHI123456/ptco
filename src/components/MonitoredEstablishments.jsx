@@ -177,25 +177,26 @@ const MonitoredEstablishments = () => {
         const estCat = (est.category || "").toLowerCase().trim();
         const estType = (est.establishmentType || est.type || "").toLowerCase().trim();
         const estName = (est.name || "").toLowerCase().trim();
-        const combined = `${estType} ${estCat} ${estName}`;
 
-        if (cLower === "hotel") {
-          return estType === "hotel" || (combined.includes("hotel") && !combined.includes("resort")) || combined.includes("inn");
+        if (cLower.includes("mabuhay")) {
+          return estCat.includes("mabuhay") || estType.includes("mabuhay") || estName.includes("mabuhay");
         }
         if (cLower === "resort") {
-          return estType === "resort" || combined.includes("resort");
+          return estCat.includes("resort") || estType.includes("resort") || estName.includes("resort");
         }
-        if (cLower.includes("mabuhay")) {
-          return estType.includes("mabuhay") || combined.includes("mabuhay");
+        if (cLower === "hotel") {
+          if (estCat.includes("mabuhay") || estType.includes("mabuhay")) return false;
+          if (estCat.includes("resort") || estType.includes("resort")) return false;
+          return estCat.includes("hotel") || estType.includes("hotel") || estName.includes("hotel") || estName.includes("inn") || estName.includes("lodge");
         }
         if (cLower.includes("homestay") || cLower.includes("home stay")) {
-          return estType.includes("homestay") || combined.includes("homestay") || combined.includes("home stay");
+          return estCat.includes("homestay") || estType.includes("homestay") || estName.includes("homestay");
         }
         if (cLower.includes("farm") || cLower.includes("camp")) {
-          return estType.includes("farm") || combined.includes("farm") || combined.includes("camp") || combined.includes("agri");
+          return estCat.includes("farm") || estCat.includes("camp") || estType.includes("farm") || estType.includes("camp") || estName.includes("farm");
         }
         if (cLower.includes("attraction")) {
-          return estType.includes("attraction") || combined.includes("attraction") || combined.includes("park") || combined.includes("reserve") || combined.includes("heritage") || combined.includes("tour");
+          return estCat.includes("attraction") || estType.includes("attraction") || estName.includes("attraction") || estName.includes("park");
         }
         return estCat === cLower || estType === cLower;
       })();

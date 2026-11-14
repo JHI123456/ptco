@@ -41,6 +41,7 @@ export async function fetchEstablishments(params = {}) {
     if (params.district && params.district !== "All") query.append("district", params.district);
     if (params.search) query.append("search", params.search);
     if (params.sort) query.append("sort", params.sort);
+    query.append("_t", Date.now());
 
     const res = await fetch(`${API_BASE_URL}/establishments?${query.toString()}`, {
       signal: AbortSignal.timeout(15000),
