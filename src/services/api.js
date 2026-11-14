@@ -90,15 +90,21 @@ export async function fetchVisitorAnalytics(params = {}) {
 
     if (!res.ok) throw new Error(`HTTP Error: ${res.status}`);
     const resData = await res.json();
-    if (resData?.data?.Bayombong) {
-      resData.data.Bayombong = resData.data.Bayombong.map((m, idx) => {
-        if (idx === 9) { // October
-          return { ...m, domestic: 5575, overnight: 5592, foreign: 17, total: 5592 };
+    if (resData?.data) {
+      Object.keys(resData.data).forEach((key) => {
+        if (Array.isArray(resData.data[key])) {
+          resData.data[key] = resData.data[key].map((m, idx) => {
+            if (idx === 9) { // October (Zen Hotel Bayombong October filing)
+              if (key === 'Bayombong' || key === 'All municipalities') {
+                return { ...m, domestic: 5575, overnight: 5592, foreign: 17, total: 5592 };
+              }
+            }
+            if (idx >= 10) { // November and December: currently ongoing, no final monthly filing yet
+              return { ...m, domestic: 0, overnight: 0, foreign: 0, total: 0 };
+            }
+            return m;
+          });
         }
-        if (idx === 10) { // November
-          return { ...m, domestic: 0, overnight: 0, foreign: 0, total: 0 };
-        }
-        return m;
       });
     }
     return resData;

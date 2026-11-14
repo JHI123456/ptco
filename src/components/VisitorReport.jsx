@@ -183,7 +183,7 @@ const VisitorReport = () => {
 
         // Also check if "All municipalities" has directly entered numbers
         const directAll = monthlyData["All municipalities"]?.[idx];
-        if (domestic === 0 && overnight === 0 && foreign === 0 && directAll) {
+        if (domestic === 0 && overnight === 0 && foreign === 0 && directAll && idx < 10) {
           domestic = Number(directAll.domestic) || 0;
           overnight = Number(directAll.overnight) || 0;
           foreign = Number(directAll.foreign) || 0;
