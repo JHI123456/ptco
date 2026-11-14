@@ -64,10 +64,28 @@ const Dashboard = ({ user, onLogout }) => {
     let isMounted = true;
     const loadLiveRecords = () => {
       fetchUsers().then((data) => {
-        if (isMounted) setOfficers(Array.isArray(data) ? data : []);
+        if (isMounted) {
+          const raw = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []);
+          const registeredUsers = raw.filter((u) => {
+            const m = (u.municipality || "").toLowerCase();
+            return m.includes("bayombong") || u.isRegistered;
+          });
+          setOfficers(registeredUsers);
+        }
       });
       fetchLGUs().then((data) => {
-        if (isMounted) setRegisteredLgus(Array.isArray(data) ? data : []);
+        if (isMounted) {
+          const list = Array.isArray(data) ? data : [];
+          // Filter to only registered LGUs (Bayombong active, others upon registering)
+          const registeredOnly = list.filter((d) => {
+            const name = (d.name || d.municipality || "").toLowerCase().trim();
+            const hasVisitors = (Number(d.totalVisitors) || 0) > 0;
+            const hasEsts = Number(d.intel?.registeredSites ?? d.establishments ?? 0) > 0;
+            const isRegistered = Boolean(d.isRegistered || d.registered || d.hasAccount);
+            return name === "bayombong" || hasVisitors || hasEsts || isRegistered;
+          });
+          setRegisteredLgus(registeredOnly);
+        }
       });
       fetchEstablishments().then((data) => {
         if (isMounted) setEstablishments(Array.isArray(data) ? data : []);

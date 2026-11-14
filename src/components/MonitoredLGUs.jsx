@@ -91,7 +91,15 @@
         fetchLGUs().then((data) => {
           if (isMounted) {
             const list = Array.isArray(data) ? data : [];
-            const sanitized = list.map((d) => ({
+            // Filter only municipalities with registered accounts or active data (Bayombong active, others upon registering)
+            const registeredOnly = list.filter((d) => {
+              const name = (d.name || d.municipality || "").toLowerCase().trim();
+              const hasVisitors = (Number(d.totalVisitors) || 0) > 0;
+              const hasEsts = Number(d.intel?.registeredSites ?? d.establishments ?? 0) > 0;
+              const isRegistered = Boolean(d.isRegistered || d.registered || d.hasAccount);
+              return name === "bayombong" || hasVisitors || hasEsts || isRegistered;
+            });
+            const sanitized = registeredOnly.map((d) => ({
               ...d,
               totalVisitors: Number(d.totalVisitors) || 0,
               foreignMice: Number(d.foreignMice) || 0,
