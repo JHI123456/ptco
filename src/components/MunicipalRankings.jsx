@@ -22,19 +22,20 @@ const MunicipalRankings = ({ initialCount = 3, lgus: propLgus = null }) => {
 
   const lgus = propLgus !== null ? propLgus : fetchedLgus;
 
-  // Transform and rank registered LGUs - only Bayombong as requested
+  // Transform and rank registered LGUs - only municipalities with registered accounts (Bayombong active, others appear upon registration)
   const rankedList = React.useMemo(() => {
     if (!Array.isArray(lgus) || lgus.length === 0) return [];
 
-    // Keep only Bayombong
-    const bayombongOnly = lgus.filter((item) => {
-      const name = (item.name || "").toLowerCase().trim();
-      return name.includes("bayombong");
+    // Filter to only include registered municipalities with an account or active visitors
+    const registeredOnly = lgus.filter((item) => {
+      const name = (item.name || item.municipality || "").toLowerCase().trim();
+      const isRegistered = item.isRegistered || item.registered || item.hasAccount || false;
+      const hasVisitors = (Number(item.totalVisitors) || 0) > 0;
+      const isBayombong = name === "bayombong";
+      return isBayombong || isRegistered || hasVisitors;
     });
 
-    const listToRank = bayombongOnly.length > 0 ? bayombongOnly : lgus.slice(0, 1);
-
-    const sorted = [...listToRank].sort((a, b) => {
+    const sorted = [...registeredOnly].sort((a, b) => {
       const vA = Number(a.totalVisitors) || 0;
       const vB = Number(b.totalVisitors) || 0;
       return vB - vA;
@@ -66,7 +67,7 @@ const MunicipalRankings = ({ initialCount = 3, lgus: propLgus = null }) => {
 
       return {
         rank,
-        municipality: item.name,
+        municipality: item.name || item.municipality || "Bayombong",
         visitors: totalVisitors.toLocaleString(),
         establishments: estCount,
         complaints: complaintsCount,
