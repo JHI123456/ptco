@@ -42,18 +42,21 @@ export const PORTAL_TARGETS = {
 /**
  * Detect which portal this frontend is currently running as.
  */
-export function detectCurrentPortal() {
-  if (typeof window === 'undefined') return 'provincial';
+export function detectCurrentPortal(fallbackDefault = 'establishment') {
+  if (typeof window === 'undefined') return fallbackDefault;
   const hostname = window.location.hostname.toLowerCase();
   const port = window.location.port;
 
+  if (hostname.includes('turismotrack-nv') || port === '5173') {
+    return 'provincial';
+  }
   if (hostname.includes('turismotrack-muni') || port === '5174') {
     return 'municipal';
   }
   if (hostname.includes('turismotrack-est') || port === '5175') {
     return 'establishment';
   }
-  return 'provincial';
+  return fallbackDefault;
 }
 
 /**
@@ -63,13 +66,36 @@ export function resolveUserPortal(user) {
   if (!user) return 'establishment';
   const role = (user.role || '').toLowerCase();
   const muni = (user.municipality || '').toLowerCase();
+  const email = (user.email || '').toLowerCase();
+  const name = (user.name || '').toLowerCase();
+  const officeName = (user.officeName || '').toLowerCase();
 
-  if (role.includes('provincial') || role === 'ptco' || muni === 'provincial') {
+  // 1. Provincial Admin (PTCO)
+  if (
+    role.includes('provincial') ||
+    role === 'ptco' ||
+    name.includes('provincial') ||
+    officeName.includes('provincial') ||
+    email === 'admin@gmail.com'
+  ) {
     return 'provincial';
   }
-  if (role.includes('muni') || role === 'municipality admin') {
+
+  // 2. Municipal Admin (LGU)
+  if (
+    role.includes('muni') ||
+    role === 'municipality admin' ||
+    role === 'municipal admin' ||
+    name.includes('municipal') ||
+    officeName.includes('municipal') ||
+    email.includes('tourism@') ||
+    email.endsWith('tourism@gmail.com') ||
+    email.endsWith('.gov.ph')
+  ) {
     return 'municipal';
   }
+
+  // 3. Establishment (Hotel / Resort / Accommodation)
   return 'establishment';
 }
 
@@ -100,14 +126,14 @@ export function fromBase64(str) {
 /**
  * Handle routing after a successful login.
  * If user belongs to this portal, triggers onLocalLogin immediately.
- * If user belongs to a different portal, constructs secure handoff URL and redirects.
+ * If user belongs to a different portal, constructs secure handoff URL and redirects immediately.
  */
-export function handleRoleBasedLoginRedirect(data, onLocalLogin) {
+export function handleRoleBasedLoginRedirect(data, onLocalLogin, fallbackDefault = 'establishment') {
   const user = data.user;
   const token = data.token || '';
   const targetPortalKey = resolveUserPortal(user);
-  const currentPortalKey = detectCurrentPortal();
-  const targetPortal = PORTAL_TARGETS[targetPortalKey] || PORTAL_TARGETS.provincial;
+  const currentPortalKey = detectCurrentPortal(fallbackDefault);
+  const targetPortal = PORTAL_TARGETS[targetPortalKey] || PORTAL_TARGETS[fallbackDefault] || PORTAL_TARGETS.establishment;
 
   if (currentPortalKey === targetPortalKey) {
     if (onLocalLogin) onLocalLogin(user, token);
@@ -127,6 +153,10 @@ export function handleRoleBasedLoginRedirect(data, onLocalLogin) {
   const encodedUser = encodeURIComponent(toBase64(JSON.stringify(user)));
   const encodedToken = encodeURIComponent(token);
   const targetUrl = `${targetOrigin}/#session_token=${encodedToken}&session_data=${encodedUser}`;
+
+  if (typeof window !== 'undefined') {
+    window.location.href = targetUrl;
+  }
 
   return {
     redirected: true,

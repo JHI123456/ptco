@@ -5,6 +5,7 @@ import nuevaVizcayaMap from '../assets/Backround.png';
 import './Login.css';
 import { API_BASE_URL } from '../services/api';
 import ForgotPasswordView from './ForgotPasswordView';
+import { handleRoleBasedLoginRedirect } from '../services/authPortalRouter.js';
 
 // SVG Icons
 const MailIcon = () => (
@@ -89,7 +90,7 @@ export default function Login({ onLogin }) {
                     setRegisterType('municipal');
                     setCurrentHash('#register');
                 } else if (h === '#register-establishment') {
-                    setRegisterType('establishment');
+                    setRegisterType('provincial');
                     setCurrentHash('#register');
                 } else {
                     setCurrentHash(h);
@@ -114,7 +115,7 @@ export default function Login({ onLogin }) {
                 setRegisterType('municipal');
                 setCurrentHash('#register');
             } else if (h === '#register-establishment') {
-                setRegisterType('establishment');
+                setRegisterType('provincial');
                 setCurrentHash('#register');
             } else {
                 setCurrentHash(h);
@@ -144,7 +145,7 @@ export default function Login({ onLogin }) {
     const [registrationSuccessMsg, setRegistrationSuccessMsg] = useState('');
 
     // Register Form State
-    const [registerType, setRegisterType] = useState('establishment'); // 'establishment' or 'municipal'
+    const [registerType, setRegisterType] = useState('provincial'); // 'establishment' or 'municipal'
     const [regOfficeName, setRegOfficeName] = useState('');
     const [establishmentName, setEstablishmentName] = useState('');
     const [establishmentType, setEstablishmentType] = useState('');
@@ -402,17 +403,25 @@ export default function Login({ onLogin }) {
 
         // ⚡ INSTANT LOGIN (0ms): If official / demo account, open dashboard IMMEDIATELY without waiting for server!
         if (fallbackUser) {
-            try {
-                localStorage.setItem('turismotrack_user', JSON.stringify(fallbackUser));
-            } catch (e) {}
+            const routing = handleRoleBasedLoginRedirect(
+                { user: fallbackUser, token: '' },
+                (user) => {
+                    try {
+                        localStorage.setItem('turismotrack_user', JSON.stringify(user));
+                    } catch (e) {}
+                    if (typeof onLogin === 'function') {
+                        onLogin(user);
+                    }
+                    if (typeof window !== 'undefined') {
+                        window.location.hash = '';
+                    }
+                    setIsLoading(false);
+                },
+                'provincial');
 
-            if (typeof onLogin === 'function') {
-                onLogin(fallbackUser);
+            if (routing?.redirected) {
+                return;
             }
-            if (typeof window !== 'undefined') {
-                window.location.hash = '';
-            }
-            setIsLoading(false);
 
             // Background token sync (silent, never blocks the user)
             fetch(`${API_BASE_URL}/auth/login`, {
@@ -447,12 +456,6 @@ export default function Login({ onLogin }) {
             const data = await res.json().catch(() => null);
 
             if (res.ok && data?.user) {
-                if (data.token) {
-                    try {
-                        localStorage.setItem('turismotrack_auth_token', data.token);
-                    } catch (e) {}
-                }
-
                 const loggedInUser = {
                     ...data.user,
                     name: data.user.establishmentName || data.user.name || trimmedEmail.split('@')[0].toUpperCase(),
@@ -463,17 +466,30 @@ export default function Login({ onLogin }) {
                     role: data.user.role || 'Accommodation Manager',
                 };
 
-                try {
-                    localStorage.setItem('turismotrack_user', JSON.stringify(loggedInUser));
-                } catch (e) {}
+                const routing = handleRoleBasedLoginRedirect(
+                    { user: loggedInUser, token: data.token || '' },
+                    (user, token) => {
+                        if (token) {
+                            try {
+                                localStorage.setItem('turismotrack_auth_token', token);
+                            } catch (e) {}
+                        }
+                        try {
+                            localStorage.setItem('turismotrack_user', JSON.stringify(user));
+                        } catch (e) {}
+                        if (typeof onLogin === 'function') {
+                            onLogin(user);
+                        }
+                        if (typeof window !== 'undefined') {
+                            window.location.hash = '';
+                        }
+                        setIsLoading(false);
+                    },
+                    'provincial');
 
-                if (typeof onLogin === 'function') {
-                    onLogin(loggedInUser);
+                if (routing?.redirected) {
+                    return;
                 }
-                if (typeof window !== 'undefined') {
-                    window.location.hash = '';
-                }
-                setIsLoading(false);
                 return;
             } else {
                 setIsLoading(false);
@@ -682,7 +698,7 @@ export default function Login({ onLogin }) {
                                 type="button"
                                 className={`register-tab-btn ${registerType === 'establishment' ? 'active' : ''}`}
                                 onClick={() => {
-                                    setRegisterType('establishment');
+                                    setRegisterType('provincial');
                                     setServerError('');
                                     setSuccessMessage('');
                                     setRegisterErrors({});
@@ -1196,7 +1212,7 @@ export default function Login({ onLogin }) {
                                     href="#register"
                                     onClick={(e) => {
                                         e.preventDefault();
-                                        setRegisterType('establishment');
+                                        setRegisterType('provincial');
                                         setServerError('');
                                         setSuccessMessage('');
                                         setRegisterErrors({});
