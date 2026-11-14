@@ -798,8 +798,8 @@ const Dashboard = ({ user, onLogout }) => {
                 </div>
               </div>
 
-              {/* MUNICIPAL PERFORMANCE RANKINGS */}
-              <MunicipalRankings lgus={registeredLgus} />
+              {/* MUNICIPAL PERFORMANCE RANKINGS (Removed for now as requested) */}
+              {/* <MunicipalRankings lgus={registeredLgus} /> */}
 
               {/* BOTTOM BRAND BANNER */}
               <div className="bottom-banner">
