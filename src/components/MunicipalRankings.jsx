@@ -22,11 +22,19 @@ const MunicipalRankings = ({ initialCount = 3, lgus: propLgus = null }) => {
 
   const lgus = propLgus !== null ? propLgus : fetchedLgus;
 
-  // Transform and rank registered LGUs by totalVisitors descending
+  // Transform and rank registered LGUs - only Bayombong as requested
   const rankedList = React.useMemo(() => {
     if (!Array.isArray(lgus) || lgus.length === 0) return [];
 
-    const sorted = [...lgus].sort((a, b) => {
+    // Keep only Bayombong
+    const bayombongOnly = lgus.filter((item) => {
+      const name = (item.name || "").toLowerCase().trim();
+      return name.includes("bayombong");
+    });
+
+    const listToRank = bayombongOnly.length > 0 ? bayombongOnly : lgus.slice(0, 1);
+
+    const sorted = [...listToRank].sort((a, b) => {
       const vA = Number(a.totalVisitors) || 0;
       const vB = Number(b.totalVisitors) || 0;
       return vB - vA;
