@@ -14,7 +14,8 @@ import {
   Search,
   CheckCircle2,
   Inbox as InboxIcon,
-  ShieldCheck
+  ShieldCheck,
+  DatabaseBackup
 } from "lucide-react";
 import "./Dashboard.css";
 import MunicipalRankings from "./MunicipalRankings";
@@ -23,6 +24,7 @@ import MonitoredEstablishments from "./MonitoredEstablishments";
 import MonitoredLGUs from "./MonitoredLGUs";
 import Inbox from "./Inbox";
 import AuditLog from "./AuditLog";
+import BackupRecovery from "./BackupRecovery";
 import CulturalRibbon from "./CulturalRibbon";
 import { fetchUsers, fetchLGUs, fetchEstablishments, fetchVisitorAnalytics } from "../services/api";
 
@@ -154,6 +156,7 @@ const Dashboard = ({ user, onLogout }) => {
     { name: "Users", icon: Users },
     { name: "Establishments", icon: Building2 },
     { name: "Audit Logs", icon: ShieldCheck },
+    { name: "Backup & Recovery", icon: DatabaseBackup },
   ];
 
   // Filter registered municipal officers in Users tab
@@ -453,6 +456,8 @@ const Dashboard = ({ user, onLogout }) => {
                           ? "USERS"
                           : activeTab === "Audit Logs"
                             ? "AUDIT & ACTIVITY TRAIL"
+                            : activeTab === "Backup & Recovery"
+                              ? "SYSTEM BACKUP & DISASTER RECOVERY"
                             : "DASHBOARD"}
               </h3>
               <p>
@@ -468,6 +473,8 @@ const Dashboard = ({ user, onLogout }) => {
                           ? "Directory of accredited municipal tourism officers and administrators"
                           : activeTab === "Audit Logs"
                             ? "Official system activity trail, security authentications, and compliance verification"
+                            : activeTab === "Backup & Recovery"
+                              ? "Continuous Cloud Snapshots, PITR, and Emergency Data Recovery"
                             : "Overview of tourism in Nueva Vizcaya"}
               </p>
             </div>
@@ -584,6 +591,8 @@ const Dashboard = ({ user, onLogout }) => {
             </div>
           ) : activeTab === "Audit Logs" ? (
             <AuditLog user={user} />
+          ) : activeTab === "Backup & Recovery" ? (
+            <BackupRecovery user={user} portalRole="Provincial" />
           ) : (
             /* MAIN DASHBOARD TAB */
             <>
