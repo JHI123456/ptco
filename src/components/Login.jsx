@@ -96,6 +96,15 @@ export default function Login({ onLogin }) {
                 }
             }
         }
+
+        // Silent background pre-warming to awaken Render backend before user clicks Log In
+        try {
+            fetch(`${API_BASE_URL}/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: 'ping@turismotrack.local', password: 'ping' }),
+            }).catch(() => {});
+        } catch (e) {}
     }, []);
 
     useEffect(() => {
@@ -389,6 +398,10 @@ export default function Login({ onLogin }) {
         setRedirectNotice(null);
 
         const trimmedEmail = email.trim().toLowerCase();
+        const fallbackUser = resolveDemoOfflineUser(trimmedEmail, password);
+        const timeoutMs = fallbackUser ? 1800 : 7000;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
         try {
             // Mahigpit na pagsusuri laban sa MongoDB Database
@@ -396,7 +409,9 @@ export default function Login({ onLogin }) {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: trimmedEmail, password }),
+                signal: controller.signal,
             });
+            clearTimeout(timeoutId);
 
             const data = await res.json().catch(() => null);
 
@@ -431,7 +446,6 @@ export default function Login({ onLogin }) {
                 return;
             } else if (!res.ok) {
                 // Check resilient offline fallback for demo/official accounts
-                const fallbackUser = resolveDemoOfflineUser(trimmedEmail, password);
                 if (fallbackUser) {
                     try {
                         localStorage.setItem('turismotrack_user', JSON.stringify(fallbackUser));
@@ -452,8 +466,9 @@ export default function Login({ onLogin }) {
                 return;
             }
         } catch {
-            // Offline fallback when server is waking up or network is unreachable
-            const fallbackUser = resolveDemoOfflineUser(trimmedEmail, password);
+            clearTimeout(timeoutId);
+
+            // Fast auto-login fallback when server is waking up or connection drops
             if (fallbackUser) {
                 try {
                     localStorage.setItem('turismotrack_user', JSON.stringify(fallbackUser));
