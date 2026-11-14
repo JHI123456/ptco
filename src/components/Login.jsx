@@ -399,9 +399,40 @@ export default function Login({ onLogin }) {
 
         const trimmedEmail = email.trim().toLowerCase();
         const fallbackUser = resolveDemoOfflineUser(trimmedEmail, password);
-        const timeoutMs = fallbackUser ? 1800 : 7000;
+
+        // ⚡ INSTANT LOGIN (0ms): If official / demo account, open dashboard IMMEDIATELY without waiting for server!
+        if (fallbackUser) {
+            try {
+                localStorage.setItem('turismotrack_user', JSON.stringify(fallbackUser));
+            } catch (e) {}
+
+            if (typeof onLogin === 'function') {
+                onLogin(fallbackUser);
+            }
+            if (typeof window !== 'undefined') {
+                window.location.hash = '';
+            }
+            setIsLoading(false);
+
+            // Background token sync (silent, never blocks the user)
+            fetch(`${API_BASE_URL}/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: trimmedEmail, password }),
+            }).then((r) => r.json()).then((data) => {
+                if (data?.token) {
+                    try {
+                        localStorage.setItem('turismotrack_auth_token', data.token);
+                    } catch (e) {}
+                }
+            }).catch(() => {});
+
+            return;
+        }
+
+        // Custom registered account: query backend with 6s timeout
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+        const timeoutId = setTimeout(() => controller.abort(), 6000);
 
         try {
             // Mahigpit na pagsusuri laban sa MongoDB Database
@@ -420,7 +451,6 @@ export default function Login({ onLogin }) {
                     try {
                         localStorage.setItem('turismotrack_auth_token', data.token);
                     } catch (e) {}
-                    if (setToken) setToken(data.token);
                 }
 
                 const loggedInUser = {
@@ -437,26 +467,15 @@ export default function Login({ onLogin }) {
                     localStorage.setItem('turismotrack_user', JSON.stringify(loggedInUser));
                 } catch (e) {}
 
-                if (setUser) setUser(loggedInUser);
-                if (onLogin) onLogin(loggedInUser);
+                if (typeof onLogin === 'function') {
+                    onLogin(loggedInUser);
+                }
                 if (typeof window !== 'undefined') {
                     window.location.hash = '';
                 }
                 setIsLoading(false);
                 return;
-            } else if (!res.ok) {
-                // Check resilient offline fallback for demo/official accounts
-                if (fallbackUser) {
-                    try {
-                        localStorage.setItem('turismotrack_user', JSON.stringify(fallbackUser));
-                    } catch (e) {}
-                    if (setUser) setUser(fallbackUser);
-                    if (onLogin) onLogin(fallbackUser);
-                    if (typeof window !== 'undefined') window.location.hash = '';
-                    setIsLoading(false);
-                    return;
-                }
-
+            } else {
                 setIsLoading(false);
                 const errorMessage =
                     data?.error || 'Hindi nakarehistro ang account na ito. Mangyaring mag-register muna bago mag-login.';
@@ -467,19 +486,6 @@ export default function Login({ onLogin }) {
             }
         } catch {
             clearTimeout(timeoutId);
-
-            // Fast auto-login fallback when server is waking up or connection drops
-            if (fallbackUser) {
-                try {
-                    localStorage.setItem('turismotrack_user', JSON.stringify(fallbackUser));
-                } catch (e) {}
-                if (setUser) setUser(fallbackUser);
-                if (onLogin) onLogin(fallbackUser);
-                if (typeof window !== 'undefined') window.location.hash = '';
-                setIsLoading(false);
-                return;
-            }
-
             setIsLoading(false);
             setLoginError('Hindi makakonekta sa server. Pakisiguradong tumatakbo ang backend server.');
             setShake(true);
