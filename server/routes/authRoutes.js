@@ -68,6 +68,9 @@ router.post("/register-municipal", async (req, res) => {
       email: cleanEmail,
       password: hashedPassword,
       role: "Municipality Admin",
+      status: "pending",
+      verificationStatus: "pending",
+      isRegistered: false,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -141,8 +144,8 @@ router.post("/register-municipal", async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      message: `${cleanOfficeName} successfully registered!`,
-      token: `token-${Date.now()}-${userId}`,
+      message: `${cleanOfficeName} successfully registered! Your account is pending official verification by the Provincial Tourism Office.`,
+      pendingApproval: true,
       user: {
         _id: userId,
         id: userId,
@@ -151,11 +154,224 @@ router.post("/register-municipal", async (req, res) => {
         municipality: cleanMunicipality,
         email: cleanEmail,
         role: "Municipality Admin",
+        status: "pending",
       },
     });
   } catch (error) {
     console.error("Municipal registration error:", error);
     return res.status(500).json({ error: error.message || "Server error during registration." });
+  }
+});
+
+// GET /api/auth/pending-approvals - Get pending accounts for Provincial or Municipal portals
+router.get("/pending-approvals", async (req, res) => {
+  try {
+    const db = mongoose.connection.db;
+    if (!db) return res.status(503).json({ error: "Database not connected" });
+
+    const { role, municipality } = req.query;
+
+    if (role === "Provincial" || !municipality) {
+      // Pending Municipal accounts for Provincial PTCO review
+      const pendingMunicipals = await db
+        .collection("users")
+        .find({
+          role: "Municipality Admin",
+          $or: [
+            { status: "pending" },
+            { verificationStatus: "pending" },
+          ],
+        })
+        .sort({ createdAt: -1 })
+        .toArray();
+
+      return res.json({
+        success: true,
+        pendingMunicipals: pendingMunicipals.map((u) => ({
+          _id: u._id,
+          id: u._id,
+          name: u.name || u.officeName,
+          officeName: u.officeName || u.name,
+          municipality: u.municipality,
+          email: u.email,
+          role: u.role,
+          status: u.status || "pending",
+          createdAt: u.createdAt,
+        })),
+      });
+    }
+
+    // Pending Establishments for a specific Municipality
+    const pendingEsts = await db
+      .collection("establishments")
+      .find({
+        municipality: { $regex: new RegExp(`^${municipality.trim()}$`, "i") },
+        $or: [
+          { status: "pending" },
+          { verificationStatus: "pending" },
+        ],
+      })
+      .sort({ createdAt: -1 })
+      .toArray();
+
+    return res.json({
+      success: true,
+      pendingEstablishments: pendingEsts,
+    });
+  } catch (err) {
+    console.error("Error fetching pending approvals:", err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/auth/approve-municipal/:id - Provincial approves Municipal Tourism Office
+router.post("/approve-municipal/:id", async (req, res) => {
+  try {
+    const db = mongoose.connection.db;
+    if (!db) return res.status(503).json({ error: "Database not connected" });
+
+    const { id } = req.params;
+    const { approvedBy } = req.body;
+    const queryId = mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id;
+
+    const user = await db.collection("users").findOne({ $or: [{ _id: queryId }, { id: id }] });
+    if (!user) {
+      return res.status(404).json({ error: "Municipal account not found." });
+    }
+
+    const muniName = user.municipality || "Bayombong";
+
+    // Update User
+    await db.collection("users").updateOne(
+      { $or: [{ _id: queryId }, { id: id }] },
+      {
+        $set: {
+          status: "active",
+          verificationStatus: "approved",
+          isRegistered: true,
+          approvedAt: new Date(),
+          approvedBy: approvedBy || "Provincial Tourism Officer (PTCO)",
+          updatedAt: new Date(),
+        },
+      }
+    );
+
+    // Update or Insert into LGUs Collection
+    await db.collection("lgus").updateOne(
+      { name: { $regex: new RegExp(`^${muniName}$`, "i") } },
+      {
+        $set: {
+          status: "Optimal",
+          isRegistered: true,
+          officer: user.name || `${muniName} Municipal Tourism Office`,
+          officerRole: "Municipal Tourism Officer",
+          updatedAt: new Date(),
+        },
+      },
+      { upsert: true }
+    );
+
+    await logAudit({
+      user: { name: approvedBy || "Provincial Tourism Officer", role: "Provincial Admin" },
+      action: "APPROVE_MUNICIPAL",
+      module: "Authentication",
+      details: `Approved and activated Municipal Tourism Office for ${muniName}`,
+      status: "Success",
+      ipAddress: extractClientIp(req),
+      metadata: { municipality: muniName, email: user.email },
+    });
+
+    return res.json({
+      success: true,
+      message: `Municipal Tourism Office of ${muniName} has been approved and activated!`,
+    });
+  } catch (err) {
+    console.error("Error approving municipality:", err);
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/auth/reject-municipal/:id - Provincial rejects Municipal Tourism Office
+router.post("/reject-municipal/:id", async (req, res) => {
+  try {
+    const db = mongoose.connection.db;
+    if (!db) return res.status(503).json({ error: "Database not connected" });
+
+    const { id } = req.params;
+    const queryId = mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id;
+
+    const user = await db.collection("users").findOne({ $or: [{ _id: queryId }, { id: id }] });
+    if (!user) {
+      return res.status(404).json({ error: "Municipal account not found." });
+    }
+
+    await db.collection("users").updateOne(
+      { $or: [{ _id: queryId }, { id: id }] },
+      {
+        $set: {
+          status: "rejected",
+          verificationStatus: "rejected",
+          rejectedAt: new Date(),
+          updatedAt: new Date(),
+        },
+      }
+    );
+
+    return res.json({
+      success: true,
+      message: `Municipal registration for ${user.municipality} has been declined.`,
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/auth/approve-establishment/:id - Municipal approves accommodation establishment
+router.post("/approve-establishment/:id", async (req, res) => {
+  try {
+    const db = mongoose.connection.db;
+    if (!db) return res.status(503).json({ error: "Database not connected" });
+
+    const { id } = req.params;
+    const queryId = mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id;
+
+    await db.collection("establishments").updateOne(
+      { $or: [{ _id: queryId }, { id: id }] },
+      { $set: { status: "active", verificationStatus: "approved", updatedAt: new Date() } }
+    );
+
+    // Also update matching user account if any
+    const est = await db.collection("establishments").findOne({ $or: [{ _id: queryId }, { id: id }] });
+    if (est?.email) {
+      await db.collection("users").updateOne(
+        { email: est.email.toLowerCase().trim() },
+        { $set: { status: "active", verificationStatus: "approved", updatedAt: new Date() } }
+      );
+    }
+
+    return res.json({ success: true, message: "Establishment approved and activated!" });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/auth/reject-establishment/:id - Municipal rejects accommodation establishment
+router.post("/reject-establishment/:id", async (req, res) => {
+  try {
+    const db = mongoose.connection.db;
+    if (!db) return res.status(503).json({ error: "Database not connected" });
+
+    const { id } = req.params;
+    const queryId = mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : id;
+
+    await db.collection("establishments").updateOne(
+      { $or: [{ _id: queryId }, { id: id }] },
+      { $set: { status: "rejected", verificationStatus: "rejected", updatedAt: new Date() } }
+    );
+
+    return res.json({ success: true, message: "Establishment rejected." });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -376,6 +592,21 @@ router.post("/login", async (req, res) => {
         ipAddress: extractClientIp(req),
       });
       return res.status(401).json({ error: "Maling password. Pakisubukang muli." });
+    }
+
+    // Check pending verification status
+    const userStatus = String(user.status || "").toLowerCase();
+    const verifStatus = String(user.verificationStatus || "").toLowerCase();
+    if (userStatus === "pending" || verifStatus === "pending") {
+      const isMuni = user.role === "Municipality Admin" || user.role?.toLowerCase().includes("municipal");
+      const msg = isMuni
+        ? "Ang inyong Municipal Tourism Office registration ay kasalukuyan pang sinusuri ng Provincial Tourism Office (PTCAO). Mangyaring maghintay para sa opisyal na pag-apruba bago mag-login."
+        : "Ang inyong accommodation registration ay kasalukuyan pang sinusuri ng Municipal Tourism Office. Mangyaring maghintay para sa opisyal na pag-apruba bago mag-login.";
+      return res.status(403).json({ error: msg, pendingApproval: true });
+    }
+
+    if (userStatus === "rejected" || verifStatus === "rejected") {
+      return res.status(403).json({ error: "Ang inyong registration account ay tinanggihan ng administrasyon.", rejected: true });
     }
 
     const isProvincial =

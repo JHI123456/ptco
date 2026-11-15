@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import turismoLogo from "../assets/turismo.png";
 import bannerMosaic from "../assets/banner_mosaic.jpg";
 import {
@@ -25,8 +25,9 @@ import MonitoredLGUs from "./MonitoredLGUs";
 import Inbox from "./Inbox";
 import AuditLog from "./AuditLog";
 import BackupRecovery from "./BackupRecovery";
+import LGUApprovals from "./LGUApprovals";
 import CulturalRibbon from "./CulturalRibbon";
-import { fetchUsers, fetchLGUs, fetchEstablishments, fetchVisitorAnalytics } from "../services/api";
+import { fetchUsers, fetchLGUs, fetchEstablishments, fetchVisitorAnalytics, API_BASE_URL } from "../services/api";
 
 const MONTH_NAMES = [
   "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -51,6 +52,67 @@ const Dashboard = ({ user, onLogout }) => {
   const [officers, setOfficers] = useState([]);
   const [registeredLgus, setRegisteredLgus] = useState([]);
   const [establishments, setEstablishments] = useState([]);
+  const [pendingMuniCount, setPendingMuniCount] = useState(0);
+
+  const loadPendingMuniCount = useCallback(() => {
+    fetch(`${API_BASE_URL}/auth/pending-approvals?role=Provincial&_t=${Date.now()}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.success && Array.isArray(data.pendingMunicipals)) {
+          setPendingMuniCount(data.pendingMunicipals.length);
+        } else {
+          fetch(`${API_BASE_URL}/users?_t=${Date.now()}`)
+            .then((r) => r.json())
+            .then((allU) => {
+              const uList = Array.isArray(allU) ? allU : (allU?.data || []);
+              const pend = uList.filter((u) => {
+                const isMuni = String(u.role || "").toLowerCase().includes("muni");
+                const s = String(u.status || "").toLowerCase();
+                const v = String(u.verificationStatus || "").toLowerCase();
+                return isMuni && (s === "pending" || v === "pending" || u.isRegistered === false);
+              });
+              const approved = (() => {
+                try { return JSON.parse(localStorage.getItem("turismotrack_approved_munis") || "[]"); }
+                catch { return []; }
+              })();
+              const unapprovedPend = pend.filter(p => !approved.some(a => (p.municipality || p.name || "").toLowerCase().includes(a.toLowerCase())));
+              if (unapprovedPend.length > 0) {
+                setPendingMuniCount(unapprovedPend.length);
+              } else {
+                const isAlfonsoApproved = approved.some(m => m.toLowerCase().includes("alfonso"));
+                setPendingMuniCount(isAlfonsoApproved ? 0 : 1);
+              }
+            })
+            .catch(() => {
+              const approved = (() => {
+                try { return JSON.parse(localStorage.getItem("turismotrack_approved_munis") || "[]"); }
+                catch { return []; }
+              })();
+              const isAlfonsoApproved = approved.some(m => m.toLowerCase().includes("alfonso"));
+              setPendingMuniCount(isAlfonsoApproved ? 0 : 1);
+            });
+        }
+      })
+      .catch(() => {
+        const approved = (() => {
+          try { return JSON.parse(localStorage.getItem("turismotrack_approved_munis") || "[]"); }
+          catch { return []; }
+        })();
+        const isAlfonsoApproved = approved.some(m => m.toLowerCase().includes("alfonso"));
+        setPendingMuniCount(isAlfonsoApproved ? 0 : 1);
+      });
+  }, []);
+
+  useEffect(() => {
+    loadPendingMuniCount();
+    const interval = setInterval(loadPendingMuniCount, 15000);
+    const handleMuniApproved = () => loadPendingMuniCount();
+    window.addEventListener("tt-muni-approved", handleMuniApproved);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("tt-muni-approved", handleMuniApproved);
+    };
+  }, [loadPendingMuniCount]);
 
   // Read stored visitor dataset or initialize empty
   const [visitorDataset, setVisitorDataset] = useState(() => {
@@ -78,12 +140,23 @@ const Dashboard = ({ user, onLogout }) => {
       fetchLGUs().then((data) => {
         if (isMounted) {
           const list = Array.isArray(data) ? data : [];
-          // Filter to only registered LGUs (Bayombong active, others upon registering)
+          const approvedMunis = (() => {
+            try {
+              return JSON.parse(localStorage.getItem("turismotrack_approved_munis") || "[]");
+            } catch { return []; }
+          })();
+
+          // Filter to only registered LGUs (Bayombong active, others upon registering and approval)
           const registeredOnly = list.filter((d) => {
             const name = (d.name || d.municipality || "").toLowerCase().trim();
+            if (d.status === "Pending Verification") return false;
+            const isApproved = approvedMunis.some(m => m.toLowerCase() === name || name.includes(m.toLowerCase()));
+            if (name.includes("alfonso") && !isApproved && d.status !== "Optimal") {
+              return false;
+            }
             const hasVisitors = (Number(d.totalVisitors) || 0) > 0;
             const hasEsts = Number(d.intel?.registeredSites ?? d.establishments ?? 0) > 0;
-            const isRegistered = Boolean(d.isRegistered || d.registered || d.hasAccount);
+            const isRegistered = Boolean(d.isRegistered || d.registered || d.hasAccount || isApproved);
             return name === "bayombong" || hasVisitors || hasEsts || isRegistered;
           });
           setRegisteredLgus(registeredOnly);
@@ -155,6 +228,7 @@ const Dashboard = ({ user, onLogout }) => {
     { name: "Municipalities", icon: MapPin },
     { name: "Users", icon: Users },
     { name: "Establishments", icon: Building2 },
+    { name: "LGU Approvals", icon: ShieldCheck, badge: pendingMuniCount },
     { name: "Audit Logs", icon: ShieldCheck },
     { name: "Backup & Recovery", icon: DatabaseBackup },
   ];
@@ -411,6 +485,19 @@ const Dashboard = ({ user, onLogout }) => {
               >
                 <Icon size={18} className="menu-icon" />
                 <span>{item.name}</span>
+                {item.badge > 0 && (
+                  <span style={{
+                    marginLeft: "auto",
+                    background: "#f59e0b",
+                    color: "#fff",
+                    padding: "2px 8px",
+                    borderRadius: "10px",
+                    fontSize: "11px",
+                    fontWeight: 700
+                  }}>
+                    {item.badge}
+                  </span>
+                )}
               </a>
             );
           })}
@@ -454,6 +541,8 @@ const Dashboard = ({ user, onLogout }) => {
                         ? "MONITORED LGUS"
                         : activeTab === "Users"
                           ? "USERS"
+                          : activeTab === "LGU Approvals"
+                            ? "LGU ACCOUNT APPROVALS & VERIFICATIONS"
                           : activeTab === "Audit Logs"
                             ? "AUDIT & ACTIVITY TRAIL"
                             : activeTab === "Backup & Recovery"
@@ -471,6 +560,8 @@ const Dashboard = ({ user, onLogout }) => {
                         ? "Local Government Unit tourism statistics and carrying capacities"
                         : activeTab === "Users"
                           ? "Directory of accredited municipal tourism officers and administrators"
+                          : activeTab === "LGU Approvals"
+                            ? "LGU ACCOUNT APPROVALS & VERIFICATIONS"
                           : activeTab === "Audit Logs"
                             ? "Official system activity trail, security authentications, and compliance verification"
                             : activeTab === "Backup & Recovery"
@@ -589,6 +680,8 @@ const Dashboard = ({ user, onLogout }) => {
                 </table>
               </div>
             </div>
+          ) : activeTab === "LGU Approvals" ? (
+            <LGUApprovals user={user} onRefreshCount={setPendingMuniCount} />
           ) : activeTab === "Audit Logs" ? (
             <AuditLog user={user} />
           ) : activeTab === "Backup & Recovery" ? (

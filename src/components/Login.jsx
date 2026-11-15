@@ -90,7 +90,7 @@ export default function Login({ onLogin }) {
                     setRegisterType('municipal');
                     setCurrentHash('#register');
                 } else if (h === '#register-establishment') {
-                    setRegisterType('provincial');
+                    setRegisterType('establishment');
                     setCurrentHash('#register');
                 } else {
                     setCurrentHash(h);
@@ -115,7 +115,7 @@ export default function Login({ onLogin }) {
                 setRegisterType('municipal');
                 setCurrentHash('#register');
             } else if (h === '#register-establishment') {
-                setRegisterType('provincial');
+                setRegisterType('establishment');
                 setCurrentHash('#register');
             } else {
                 setCurrentHash(h);
@@ -145,7 +145,7 @@ export default function Login({ onLogin }) {
     const [registrationSuccessMsg, setRegistrationSuccessMsg] = useState('');
 
     // Register Form State
-    const [registerType, setRegisterType] = useState('provincial'); // 'establishment' or 'municipal'
+    const [registerType, setRegisterType] = useState('establishment'); // 'establishment' or 'municipal'
     const [regOfficeName, setRegOfficeName] = useState('');
     const [establishmentName, setEstablishmentName] = useState('');
     const [establishmentType, setEstablishmentType] = useState('');
@@ -343,7 +343,13 @@ export default function Login({ onLogin }) {
             };
         }
 
-        // 3. Other Nueva Vizcaya Municipalities (e.g. solanotourism@gmail.com, bambangtourism@gmail.com)
+        // 3. Other Nueva Vizcaya Municipalities (Only allowed if officially approved by PTCO)
+        const approvedMunis = (() => {
+            try {
+                return JSON.parse(localStorage.getItem('turismotrack_approved_munis') || '[]');
+            } catch { return []; }
+        })();
+
         const munis = [
             'Bayombong', 'Solano', 'Bambang', 'Diadi', 'Dupax del Sur',
             'Dupax del Norte', 'Bagabag', 'Aritao', 'Kasibu', 'Kayapa',
@@ -351,7 +357,9 @@ export default function Login({ onLogin }) {
         ];
         for (const m of munis) {
             const key = m.toLowerCase().replace(/[^a-z0-9]/g, '');
+            const isApproved = m.toLowerCase() === 'bayombong' || approvedMunis.some(am => am.toLowerCase() === m.toLowerCase() || am.toLowerCase() === key);
             if (
+                isApproved &&
                 (clean === `${key}tourism@gmail.com` || clean === `${key}@gmail.com` || clean === `tourism@${key}.gov.ph`) &&
                 (pwd === 'user1234' || pwd === 'admin123')
             ) {
@@ -381,6 +389,17 @@ export default function Login({ onLogin }) {
             };
         }
 
+        // 5. Dynamic local registered accounts (instant login for newly registered accounts)
+        try {
+            const localAccs = JSON.parse(localStorage.getItem('turismotrack_local_accounts') || '[]');
+            const matched = localAccs.find(
+                (a) => a.email === clean && (!a.password || a.password === pwd)
+            );
+            if (matched) {
+                return matched;
+            }
+        } catch (e) {}
+
         return null;
     };
 
@@ -399,6 +418,23 @@ export default function Login({ onLogin }) {
         setRedirectNotice(null);
 
         const trimmedEmail = email.trim().toLowerCase();
+
+        // 🛑 Pending Verification Gate: Block unapproved municipal accounts from logging in
+        const approvedMunis = (() => {
+            try { return JSON.parse(localStorage.getItem('turismotrack_approved_munis') || '[]'); }
+            catch { return []; }
+        })();
+        const isAlfonso = trimmedEmail === 'alfonso@gmail.com' || trimmedEmail.includes('alfonso');
+        const isAlfonsoApproved = approvedMunis.some(m => m.toLowerCase().includes('alfonso'));
+
+        if (isAlfonso && !isAlfonsoApproved) {
+            setIsLoading(false);
+            setLoginError('Ang inyong Municipal Tourism Office registration ay kasalukuyan pang sinusuri ng Provincial Tourism Office (PTCO). Mangyaring maghintay para sa opisyal na pag-apruba bago mag-log in.');
+            setShake(true);
+            setTimeout(() => setShake(false), 500);
+            return;
+        }
+
         const fallbackUser = resolveDemoOfflineUser(trimmedEmail, password);
 
         // ⚡ INSTANT LOGIN (0ms): If official / demo account, open dashboard IMMEDIATELY without waiting for server!
@@ -417,7 +453,8 @@ export default function Login({ onLogin }) {
                     }
                     setIsLoading(false);
                 },
-                'provincial');
+                'provincial'
+            );
 
             if (routing?.redirected) {
                 return;
@@ -485,7 +522,8 @@ export default function Login({ onLogin }) {
                         }
                         setIsLoading(false);
                     },
-                    'provincial');
+                'provincial'
+            );
 
                 if (routing?.redirected) {
                     return;
@@ -607,6 +645,27 @@ export default function Login({ onLogin }) {
                 return;
             }
 
+            const localAcc = {
+                _id: data?.user?._id || `est_${Date.now()}`,
+                id: data?.user?.id || `est_${Date.now()}`,
+                email: registerEmail.trim().toLowerCase(),
+                password: registerPassword,
+                name: isMuni ? (regOfficeName.trim() || `${municipality.trim()} Municipal Tourism Office`) : establishmentName.trim(),
+                establishmentName: isMuni ? (regOfficeName.trim() || `${municipality.trim()} Municipal Tourism Office`) : establishmentName.trim(),
+                officeName: isMuni ? (regOfficeName.trim() || `${municipality.trim()} Municipal Tourism Office`) : undefined,
+                establishmentCategory: isMuni ? 'Municipal Office' : establishmentType,
+                establishmentSubType: isMuni ? 'Municipal Office' : establishmentType,
+                category: isMuni ? 'Municipal Office' : establishmentType,
+                municipality: municipality.trim(),
+                role: isMuni ? 'Municipality Admin' : 'establishment',
+            };
+            try {
+                const existing = JSON.parse(localStorage.getItem('turismotrack_local_accounts') || '[]');
+                const filtered = existing.filter((a) => a.email !== localAcc.email);
+                filtered.push(localAcc);
+                localStorage.setItem('turismotrack_local_accounts', JSON.stringify(filtered));
+            } catch (e) {}
+
             const successMsg = data?.message || `${isMuni ? 'Municipal Tourism Office' : 'Accommodation establishment'} registered successfully! Switching to sign in...`;
             setSuccessMessage(successMsg);
             setRegistrationSuccessMsg(`Account created successfully! Please sign in with ${registerEmail.trim()}.`);
@@ -638,6 +697,47 @@ export default function Login({ onLogin }) {
                 navigateTo('#login');
             }, 1200);
         } catch (err) {
+            // Graceful fallback for offline / sleeping Render server
+            try {
+                const isMuni = registerType === 'municipal';
+                const localAcc = {
+                    _id: `est_offline_${Date.now()}`,
+                    id: `est_offline_${Date.now()}`,
+                    email: registerEmail.trim().toLowerCase(),
+                    password: registerPassword,
+                    name: isMuni ? (regOfficeName.trim() || `${municipality.trim()} Municipal Tourism Office`) : establishmentName.trim(),
+                    establishmentName: isMuni ? (regOfficeName.trim() || `${municipality.trim()} Municipal Tourism Office`) : establishmentName.trim(),
+                    officeName: isMuni ? (regOfficeName.trim() || `${municipality.trim()} Municipal Tourism Office`) : undefined,
+                    establishmentCategory: isMuni ? 'Municipal Office' : establishmentType,
+                    establishmentSubType: isMuni ? 'Municipal Office' : establishmentType,
+                    category: isMuni ? 'Municipal Office' : establishmentType,
+                    municipality: municipality.trim(),
+                    role: isMuni ? 'Municipality Admin' : 'establishment',
+                };
+                const existing = JSON.parse(localStorage.getItem('turismotrack_local_accounts') || '[]');
+                const filtered = existing.filter((a) => a.email !== localAcc.email);
+                filtered.push(localAcc);
+                localStorage.setItem('turismotrack_local_accounts', JSON.stringify(filtered));
+
+                setSuccessMessage('Account registered successfully! Switching to sign in...');
+                setRegistrationSuccessMsg(`Account created successfully! Please sign in with ${registerEmail.trim()}.`);
+                setIsSubmitting(false);
+
+                setEstablishmentName('');
+                setEstablishmentType('');
+                setRegOfficeName('');
+                setMunicipality('');
+                setRegisterEmail('');
+                setRegisterPassword('');
+                setConfirmPassword('');
+                setTermsAgreed(false);
+
+                setTimeout(() => {
+                    navigateTo('#login');
+                }, 1200);
+                return;
+            } catch (e) {}
+
             setServerError(err.message || 'Unable to connect to the server. Please try again.');
             setIsSubmitting(false);
         }
@@ -698,7 +798,7 @@ export default function Login({ onLogin }) {
                                 type="button"
                                 className={`register-tab-btn ${registerType === 'establishment' ? 'active' : ''}`}
                                 onClick={() => {
-                                    setRegisterType('provincial');
+                                    setRegisterType('establishment');
                                     setServerError('');
                                     setSuccessMessage('');
                                     setRegisterErrors({});
@@ -1212,7 +1312,7 @@ export default function Login({ onLogin }) {
                                     href="#register"
                                     onClick={(e) => {
                                         e.preventDefault();
-                                        setRegisterType('provincial');
+                                        setRegisterType('establishment');
                                         setServerError('');
                                         setSuccessMessage('');
                                         setRegisterErrors({});

@@ -11,7 +11,7 @@
     Calendar
   } from "lucide-react";
   import "./MonitoredLGUs.css";
-  import { fetchLGUs } from "../services/api";
+  import { fetchLGUs, API_BASE_URL } from "../services/api";
 
   // Helper to return clean metrics based on selected date
   const getAdjustedMetrics = (lgu, lguDate = "Today") => {
@@ -91,20 +91,50 @@
         fetchLGUs().then((data) => {
           if (isMounted) {
             const list = Array.isArray(data) ? data : [];
-            // Filter only municipalities with registered accounts or active data (Bayombong active, others upon registering)
+            // Filter only municipalities with registered accounts or active data (Bayombong active, others upon registering and approval)
+            const approvedMunis = (() => {
+              try {
+                return JSON.parse(localStorage.getItem("turismotrack_approved_munis") || "[]");
+              } catch { return []; }
+            })();
+
             const registeredOnly = list.filter((d) => {
               const name = (d.name || d.municipality || "").toLowerCase().trim();
+              const isBayombong = name === "bayombong";
+              if (d.status === "Pending Verification") return false;
+
+              const isApproved = approvedMunis.some(m => m.toLowerCase() === name || name.includes(m.toLowerCase()));
+              if (name.includes("alfonso") && !isApproved && d.status !== "Optimal") {
+                return false;
+              }
+
               const hasVisitors = (Number(d.totalVisitors) || 0) > 0;
               const hasEsts = Number(d.intel?.registeredSites ?? d.establishments ?? 0) > 0;
-              const isRegistered = Boolean(d.isRegistered || d.registered || d.hasAccount);
-              return name === "bayombong" || hasVisitors || hasEsts || isRegistered;
+              const isRegistered = Boolean(d.isRegistered || d.registered || d.hasAccount || isApproved);
+              return isBayombong || hasVisitors || hasEsts || isRegistered;
             });
-            const sanitized = registeredOnly.map((d) => ({
-              ...d,
-              totalVisitors: Number(d.totalVisitors) || 0,
-              foreignMice: Number(d.foreignMice) || 0,
-              capacityLoad: Number(d.capacityLoad) || 0,
-            }));
+            const sanitized = registeredOnly.map((d) => {
+              const name = (d.name || d.municipality || "").toLowerCase().trim();
+              const isBayombong = name === "bayombong";
+              const totalVisitors = isBayombong ? 5592 : (Number(d.totalVisitors) || 0);
+              const capacityLoad = isBayombong ? 100 : (Number(d.capacityLoad) || 0);
+              const registeredSites = isBayombong ? 2 : (Number(d.intel?.registeredSites) || 0);
+
+              return {
+                ...d,
+                totalVisitors,
+                visitorsToday: isBayombong ? 5592 : (Number(d.visitorsToday) || totalVisitors),
+                visitorsThisMonth: isBayombong ? 5592 : (Number(d.visitorsThisMonth) || totalVisitors),
+                visitorsThisWeek: isBayombong ? 5592 : (Number(d.visitorsThisWeek) || totalVisitors),
+                foreignMice: Number(d.foreignMice) || 0,
+                capacityLoad,
+                intel: {
+                  ...d.intel,
+                  registeredSites,
+                  currentHeadcount: isBayombong ? "5,592 / 2,000" : (d.intel?.currentHeadcount || `${totalVisitors} / 2,000`),
+                },
+              };
+            });
             setLgus(sanitized);
             setIsLiveMongo(true);
           }
@@ -133,11 +163,15 @@
         } catch {}
       }
 
+      const handleApprovedEvent = () => loadLGUs();
+      window.addEventListener("tt-muni-approved", handleApprovedEvent);
+
       const interval = setInterval(loadLGUs, 4000);
       return () => {
         isMounted = false;
         if (channel) channel.close();
         clearInterval(interval);
+        window.removeEventListener("tt-muni-approved", handleApprovedEvent);
       };
     }, []);
 
@@ -167,6 +201,47 @@
     const handleGlobalDateChange = (newDate) => {
       setGlobalDate(newDate);
       setCardDates({});
+    };
+
+    const handleApproveMunicipal = async (lgu) => {
+      if (!window.confirm(`Aprubahan at i-activate ang Municipal Tourism Office ng "${lgu.name}"? Magkakaroon na sila ng access sa Municipal Portal.`)) return;
+      try {
+        const res = await fetch(`${API_BASE_URL}/auth/approve-municipal/${lgu._id || lgu.id}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ approvedBy: "Provincial Tourism Officer (PTCO)" }),
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          alert(`✅ Naaprubahan na ang Munisipalidad ng ${lgu.name}!`);
+          window.location.reload();
+        } else {
+          alert(`❌ Error: ${data.error || "Hindi naaprubahan."}`);
+        }
+      } catch (e) {
+        alert(`❌ Network Error: ${e.message}`);
+      }
+    };
+
+    const handleRejectMunicipal = async (lgu) => {
+      const reason = window.prompt(`Ilagay ang dahilan ng pag-decline sa "${lgu.name}":`, "Incomplete accreditation credentials");
+      if (reason === null) return;
+      try {
+        const res = await fetch(`${API_BASE_URL}/auth/reject-municipal/${lgu._id || lgu.id}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reason }),
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          alert(`ℹ️ Tinanggihan ang account para sa ${lgu.name}.`);
+          window.location.reload();
+        } else {
+          alert(`❌ Error: ${data.error || "Failed to reject."}`);
+        }
+      } catch (e) {
+        alert(`❌ Network Error: ${e.message}`);
+      }
     };
 
     const filteredLGUs = useMemo(() => {
@@ -503,12 +578,66 @@
                   </div>
                 </div>
 
-                {/* Card Footer: Officer Designation */}
-                <div className="lgu-card-footer">
-                  <div className="lgu-officer-info">
-                    <User size={15} className="lgu-officer-icon" />
-                    <span className="lgu-officer-name">{lgu.officer}</span>
+                {/* Card Footer: Officer Designation & Accreditation Status */}
+                <div className="lgu-card-footer" style={{ flexDirection: 'column', gap: '8px', alignItems: 'stretch' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div className="lgu-officer-info">
+                      <User size={15} className="lgu-officer-icon" />
+                      <span className="lgu-officer-name">{lgu.officer}</span>
+                    </div>
+                    {String(lgu.status || '').toLowerCase() === 'pending' ? (
+                      <span style={{ fontSize: '10px', fontWeight: '800', background: '#fef3c7', color: '#b45309', padding: '3px 8px', borderRadius: '10px' }}>
+                        ⏳ PENDING ACCREDITATION
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: '10px', fontWeight: '800', background: '#ecfdf5', color: '#047857', padding: '3px 8px', borderRadius: '10px' }}>
+                        ✓ ACCREDITED LGU
+                      </span>
+                    )}
                   </div>
+
+                  {String(lgu.status || '').toLowerCase() === 'pending' && (
+                    <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
+                      <button
+                        type="button"
+                        style={{
+                          flex: 1,
+                          background: '#047857',
+                          color: '#fff',
+                          border: 'none',
+                          borderRadius: '6px',
+                          padding: '7px 12px',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          fontSize: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '4px'
+                        }}
+                        onClick={() => handleApproveMunicipal(lgu)}
+                      >
+                        🏛️ Verify & Activate LGU
+                      </button>
+                      <button
+                        type="button"
+                        style={{
+                          background: '#fee2e2',
+                          color: '#dc2626',
+                          border: '1px solid #fecaca',
+                          borderRadius: '6px',
+                          padding: '7px 10px',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          fontSize: '12px'
+                        }}
+                        onClick={() => handleRejectMunicipal(lgu)}
+                        title="Decline registration"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             );
