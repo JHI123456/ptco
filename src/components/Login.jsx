@@ -389,14 +389,18 @@ export default function Login({ onLogin }) {
             };
         }
 
-        // 5. Dynamic local registered accounts (instant login for newly registered accounts)
+        // 5. Dynamic local registered accounts (Only if already approved by PTCO)
         try {
             const localAccs = JSON.parse(localStorage.getItem('turismotrack_local_accounts') || '[]');
             const matched = localAccs.find(
                 (a) => a.email === clean && (!a.password || a.password === pwd)
             );
             if (matched) {
-                return matched;
+                const isPending = matched.status === 'pending' || matched.verificationStatus === 'pending' || matched.isRegistered === false;
+                const isApproved = approvedMunis.some(am => am.toLowerCase() === (matched.municipality || '').toLowerCase());
+                if (!isPending || isApproved) {
+                    return matched;
+                }
             }
         } catch (e) {}
 
@@ -424,10 +428,19 @@ export default function Login({ onLogin }) {
             try { return JSON.parse(localStorage.getItem('turismotrack_approved_munis') || '[]'); }
             catch { return []; }
         })();
-        const isAlfonso = trimmedEmail === 'alfonso@gmail.com' || trimmedEmail.includes('alfonso');
-        const isAlfonsoApproved = approvedMunis.some(m => m.toLowerCase().includes('alfonso'));
+        const pendingMunis = (() => {
+            try { return JSON.parse(localStorage.getItem('turismotrack_pending_munis') || '[]'); }
+            catch { return []; }
+        })();
+        const isPendingMuni =
+            trimmedEmail.includes('alfonso') ||
+            pendingMunis.some(p => (p.email || p).toLowerCase() === trimmedEmail);
 
-        if (isAlfonso && !isAlfonsoApproved) {
+        const matchedPending = pendingMunis.find(p => (p.email || p).toLowerCase() === trimmedEmail);
+        const pendingMuniName = matchedPending?.municipality || (trimmedEmail.includes('alfonso') ? 'Alfonso Castañeda' : '');
+        const isApproved = pendingMuniName && approvedMunis.some(m => m.toLowerCase() === pendingMuniName.toLowerCase());
+
+        if (isPendingMuni && !isApproved) {
             setIsLoading(false);
             setLoginError('Ang inyong Municipal Tourism Office registration ay kasalukuyan pang sinusuri ng Provincial Tourism Office (PTCO). Mangyaring maghintay para sa opisyal na pag-apruba bago mag-log in.');
             setShake(true);
@@ -646,8 +659,8 @@ export default function Login({ onLogin }) {
             }
 
             const localAcc = {
-                _id: data?.user?._id || `est_${Date.now()}`,
-                id: data?.user?.id || `est_${Date.now()}`,
+                _id: data?.user?._id || `muni_${Date.now()}`,
+                id: data?.user?.id || `muni_${Date.now()}`,
                 email: registerEmail.trim().toLowerCase(),
                 password: registerPassword,
                 name: isMuni ? (regOfficeName.trim() || `${municipality.trim()} Municipal Tourism Office`) : establishmentName.trim(),
@@ -658,12 +671,23 @@ export default function Login({ onLogin }) {
                 category: isMuni ? 'Municipal Office' : establishmentType,
                 municipality: municipality.trim(),
                 role: isMuni ? 'Municipality Admin' : 'establishment',
+                status: 'pending',
+                verificationStatus: 'pending',
+                isRegistered: false,
+                createdAt: new Date().toISOString(),
             };
             try {
                 const existing = JSON.parse(localStorage.getItem('turismotrack_local_accounts') || '[]');
                 const filtered = existing.filter((a) => a.email !== localAcc.email);
                 filtered.push(localAcc);
                 localStorage.setItem('turismotrack_local_accounts', JSON.stringify(filtered));
+
+                if (isMuni) {
+                    const pendingM = JSON.parse(localStorage.getItem('turismotrack_pending_munis') || '[]');
+                    const filteredP = pendingM.filter((a) => (a.email || a).toLowerCase() !== localAcc.email);
+                    filteredP.push(localAcc);
+                    localStorage.setItem('turismotrack_pending_munis', JSON.stringify(filteredP));
+                }
             } catch (e) {}
 
             const successMsg = data?.message || `${isMuni ? 'Municipal Tourism Office' : 'Accommodation establishment'} registered successfully! Switching to sign in...`;
@@ -701,8 +725,8 @@ export default function Login({ onLogin }) {
             try {
                 const isMuni = registerType === 'municipal';
                 const localAcc = {
-                    _id: `est_offline_${Date.now()}`,
-                    id: `est_offline_${Date.now()}`,
+                    _id: `muni_offline_${Date.now()}`,
+                    id: `muni_offline_${Date.now()}`,
                     email: registerEmail.trim().toLowerCase(),
                     password: registerPassword,
                     name: isMuni ? (regOfficeName.trim() || `${municipality.trim()} Municipal Tourism Office`) : establishmentName.trim(),
@@ -713,11 +737,22 @@ export default function Login({ onLogin }) {
                     category: isMuni ? 'Municipal Office' : establishmentType,
                     municipality: municipality.trim(),
                     role: isMuni ? 'Municipality Admin' : 'establishment',
+                    status: 'pending',
+                    verificationStatus: 'pending',
+                    isRegistered: false,
+                    createdAt: new Date().toISOString(),
                 };
                 const existing = JSON.parse(localStorage.getItem('turismotrack_local_accounts') || '[]');
                 const filtered = existing.filter((a) => a.email !== localAcc.email);
                 filtered.push(localAcc);
                 localStorage.setItem('turismotrack_local_accounts', JSON.stringify(filtered));
+
+                if (isMuni) {
+                    const pendingM = JSON.parse(localStorage.getItem('turismotrack_pending_munis') || '[]');
+                    const filteredP = pendingM.filter((a) => (a.email || a).toLowerCase() !== localAcc.email);
+                    filteredP.push(localAcc);
+                    localStorage.setItem('turismotrack_pending_munis', JSON.stringify(filteredP));
+                }
 
                 setSuccessMessage('Account registered successfully! Switching to sign in...');
                 setRegistrationSuccessMsg(`Account created successfully! Please sign in with ${registerEmail.trim()}.`);

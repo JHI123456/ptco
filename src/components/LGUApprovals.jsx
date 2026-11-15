@@ -46,7 +46,29 @@ export default function LGUApprovals({ user, onRefreshCount }) {
         } catch (e) {}
       }
 
-      // 3. Fallback for registered municipal accounts waiting for PTCO approval
+      // 3. Incorporate locally recorded pending registrations
+      try {
+        const storedPending = JSON.parse(localStorage.getItem("turismotrack_pending_munis") || "[]");
+        storedPending.forEach((sp) => {
+          const spEmail = (sp.email || "").toLowerCase();
+          const alreadyInList = list.some((l) => (l.email || "").toLowerCase() === spEmail);
+          if (!alreadyInList) {
+            list.push({
+              _id: sp._id || `muni_${Date.now()}`,
+              id: sp.id || sp._id,
+              name: sp.name || sp.officeName || `${sp.municipality} Municipal Tourism Office`,
+              officeName: sp.officeName || sp.name || `${sp.municipality} Municipal Tourism Office`,
+              municipality: sp.municipality,
+              email: sp.email,
+              role: sp.role || "Municipality Admin",
+              status: "pending",
+              createdAt: sp.createdAt || new Date().toISOString(),
+            });
+          }
+        });
+      } catch (e) {}
+
+      // 4. Fallback for registered municipal accounts waiting for PTCO approval
       const approvedMunis = (() => {
         try {
           return JSON.parse(localStorage.getItem("turismotrack_approved_munis") || "[]");
