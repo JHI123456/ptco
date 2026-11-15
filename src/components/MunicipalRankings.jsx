@@ -42,11 +42,20 @@ const MunicipalRankings = ({ initialCount = 3, lgus: propLgus = null }) => {
           return isBayombong || isRegistered || hasVisitors;
         });
 
-    const sorted = [...registeredOnly].sort((a, b) => {
-      const vA = Number(a.totalVisitors) || 0;
-      const vB = Number(b.totalVisitors) || 0;
-      return vB - vA;
-    });
+    const sorted = [...registeredOnly]
+      .map((item) => {
+        const name = (item.name || item.municipality || "").toLowerCase().trim();
+        const isBayombong = name === "bayombong";
+        return {
+          ...item,
+          totalVisitors: isBayombong ? 5592 : (Number(item.totalVisitors) || 0),
+        };
+      })
+      .sort((a, b) => {
+        const vA = Number(a.totalVisitors) || 0;
+        const vB = Number(b.totalVisitors) || 0;
+        return vB - vA;
+      });
 
     return sorted.map((item, index) => {
       const rank = index + 1;
