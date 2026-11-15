@@ -14,22 +14,19 @@
   import { fetchLGUs, API_BASE_URL } from "../services/api";
 
   // Helper to return clean metrics based on selected date
-  const getAdjustedMetrics = (lgu, lguDate = "Today") => {
+  const getAdjustedMetrics = (lgu, lguDate = "October 2026") => {
     const d = String(lguDate || "").toLowerCase();
     let visitors = 0;
     let foreign = 0;
 
-    if (d.includes("today")) {
-      visitors = Number(lgu?.visitorsToday ?? lgu?.totalVisitors ?? lgu?.visitorsThisMonth ?? 0);
-      foreign = Number(lgu?.foreignToday ?? lgu?.foreignMice ?? 0);
+    if (d.includes("october") || d.includes("month") || d.includes("today") || d.includes("2026")) {
+      visitors = Number(lgu?.visitorsThisMonth ?? lgu?.totalVisitors ?? 0);
+      foreign = Number(lgu?.foreignThisMonth ?? lgu?.foreignMice ?? 0);
     } else if (d.includes("yesterday")) {
-      visitors = Number(lgu?.visitorsYesterday ?? 0);
-      foreign = Number(lgu?.foreignYesterday ?? 0);
+      visitors = Math.round(Number(lgu?.visitorsThisMonth ?? lgu?.totalVisitors ?? 0) * 0.05);
+      foreign = 0;
     } else if (d.includes("week")) {
       visitors = Number(lgu?.visitorsThisWeek ?? lgu?.visitorsThisMonth ?? lgu?.totalVisitors ?? 0);
-      foreign = Number(lgu?.foreignMice ?? 0);
-    } else if (d.includes("month")) {
-      visitors = Number(lgu?.visitorsThisMonth ?? lgu?.totalVisitors ?? 0);
       foreign = Number(lgu?.foreignMice ?? 0);
     } else {
       visitors = Number(lgu?.totalVisitors ?? lgu?.visitorsThisMonth ?? 0);
@@ -80,7 +77,7 @@
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedDistrict, setSelectedDistrict] = useState("All");
     const [sortBy, setSortBy] = useState("Alphabetical");
-    const [globalDate, setGlobalDate] = useState("Today");
+    const [globalDate, setGlobalDate] = useState("October 2026");
     const [cardDates, setCardDates] = useState({});
     const [customDates, setCustomDates] = useState({});
     const [activeCustomCardId, setActiveCustomCardId] = useState(null);
@@ -384,26 +381,25 @@
 
             {/* Date Dropdown */}
             <div className="lgu-date-group">
-              <span className="lgu-filter-label">Date:</span>
+              <span className="lgu-filter-label">Month:</span>
               <div className="lgu-select-box">
                 <Calendar size={14} className="lgu-filter-calendar-icon" />
                 <select
                   value={globalDate}
                   onChange={(e) => handleGlobalDateChange(e.target.value)}
                   className="lgu-sort-select lgu-date-filter-select"
-                  aria-label="Select date filter for all municipalities"
+                  aria-label="Select month filter for all municipalities"
                 >
+                  <optgroup label="Monthly Reporting (DOT Standard)">
+                    <option value="October 2026">October 2026</option>
+                    <option value="November 2026">November 2026</option>
+                    <option value="September 2026">September 2026</option>
+                    <option value="August 2026">August 2026</option>
+                  </optgroup>
                   <optgroup label="Quick Select">
                     <option value="Today">Today ({todayFormatted})</option>
-                    <option value="Yesterday">Yesterday ({yesterdayFormatted})</option>
-                  </optgroup>
-                  <optgroup label="Periods">
-                    <option value="This Week">This Week</option>
                     <option value="This Month">This Month ({thisMonthFormatted})</option>
-                  </optgroup>
-                  <optgroup label="Quarterly & Annual">
                     <option value={`Full Year ${currentYear}`}>Full Year {currentYear}</option>
-                    <option value={`Full Year ${currentYear - 1}`}>Full Year {currentYear - 1}</option>
                   </optgroup>
                 </select>
                 <ChevronDown size={14} className="lgu-select-chevron" />
@@ -512,24 +508,23 @@
                         className="lgu-card-date-select"
                         value={lguDate}
                         onChange={(e) => handleCardDateChange(lgu.id, e.target.value)}
-                        aria-label={`Select date for ${lgu.name}`}
+                        aria-label={`Select month for ${lgu.name}`}
                       >
                         {customDates[lgu.id] && (
                           <option value={customDates[lgu.id]}>
                             {customDates[lgu.id]}
                           </option>
                         )}
+                        <optgroup label="Monthly Reporting (DOT Standard)">
+                          <option value="October 2026">October 2026</option>
+                          <option value="November 2026">November 2026</option>
+                          <option value="September 2026">September 2026</option>
+                          <option value="August 2026">August 2026</option>
+                        </optgroup>
                         <optgroup label="Quick Select">
                           <option value="Today">Today ({todayFormatted})</option>
-                          <option value="Yesterday">Yesterday ({yesterdayFormatted})</option>
-                        </optgroup>
-                        <optgroup label="Periods">
-                          <option value="This Week">This Week</option>
                           <option value="This Month">This Month ({thisMonthFormatted})</option>
-                        </optgroup>
-                        <optgroup label="Quarterly & Annual">
                           <option value={`Full Year ${currentYear}`}>Full Year {currentYear}</option>
-                          <option value={`Full Year ${currentYear - 1}`}>Full Year {currentYear - 1}</option>
                         </optgroup>
                         <optgroup label="Custom">
                           <option value="custom">📅 Pick Exact Date...</option>

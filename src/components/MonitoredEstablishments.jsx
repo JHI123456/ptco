@@ -16,29 +16,23 @@ const ESTABLISHMENTS_DATA = [
 
 ];
 
-const getAdjustedMetrics = (item, estDate = "Today") => {
+const getAdjustedMetrics = (item, estDate = "October 2026") => {
   const d = String(estDate || "").toLowerCase();
 
   let visitors = 0;
   let foreign = 0;
 
-  if (d.includes("today")) {
-    visitors = Number(item?.totalVisitors || item?.visitorsThisMonth || item?.visitorsToday || 0);
+  if (d.includes("october") || d.includes("month") || d.includes("today") || d.includes("2026")) {
+    visitors = Number(item?.totalVisitors || item?.visitorsThisMonth || 0);
     foreign = Number(item?.foreignMice || item?.foreignToday || 0);
   } else if (d.includes("yesterday")) {
-    visitors = Number(item?.visitorsYesterday ?? (item?.visitorsToday ? Math.round(item.visitorsToday * 0.9) : 0));
-    foreign = Number(item?.foreignYesterday ?? 0);
+    visitors = Math.round(Number(item?.totalVisitors || item?.visitorsThisMonth || 0) * 0.05);
+    foreign = 0;
   } else if (d.includes("week")) {
     visitors = Number(item?.visitorsThisWeek || item?.visitorsThisMonth || item?.totalVisitors || 0);
     foreign = Number(item?.foreignMice || 0);
-  } else if (d.includes("month")) {
-    visitors = Number(item?.visitorsThisMonth || item?.totalVisitors || 0);
-    foreign = Number(item?.foreignMice || 0);
-  } else if (d.includes("year")) {
-    visitors = Number(item?.totalVisitors || item?.visitorsThisMonth || 0);
-    foreign = Number(item?.foreignMice || 0);
   } else {
-    visitors = Number(item?.totalVisitors || item?.visitorsThisMonth || item?.visitorsToday || 0);
+    visitors = Number(item?.totalVisitors || item?.visitorsThisMonth || 0);
     foreign = Number(item?.foreignMice || item?.foreignToday || 0);
   }
 
@@ -86,7 +80,7 @@ const MonitoredEstablishments = () => {
   const [selectedDistrict, setSelectedDistrict] = useState("All");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [sortBy, setSortBy] = useState("Most Visitors");
-  const [globalDate, setGlobalDate] = useState("Today");
+  const [globalDate, setGlobalDate] = useState("October 2026");
   const [cardDates, setCardDates] = useState({});
   const [customDates, setCustomDates] = useState({});
   const [activeCustomCardId, setActiveCustomCardId] = useState(null);
@@ -325,26 +319,25 @@ const MonitoredEstablishments = () => {
 
           {/* Date Filter Dropdown */}
           <div className="est-date-group">
-            <span className="est-filter-label">Date:</span>
+            <span className="est-filter-label">Month:</span>
             <div className="est-select-box">
               <Calendar size={14} className="est-filter-calendar-icon" />
               <select
                 value={globalDate}
                 onChange={(e) => handleGlobalDateChange(e.target.value)}
                 className="est-sort-select est-date-filter-select"
-                aria-label="Select date filter for all establishments"
+                aria-label="Select month filter for all establishments"
               >
+                <optgroup label="Monthly Reporting (DOT Standard)">
+                  <option value="October 2026">October 2026</option>
+                  <option value="November 2026">November 2026</option>
+                  <option value="September 2026">September 2026</option>
+                  <option value="August 2026">August 2026</option>
+                </optgroup>
                 <optgroup label="Quick Select">
                   <option value="Today">Today ({todayFormatted})</option>
-                  <option value="Yesterday">Yesterday ({yesterdayFormatted})</option>
-                </optgroup>
-                <optgroup label="Periods">
-                  <option value="This Week">This Week</option>
                   <option value="This Month">This Month ({thisMonthFormatted})</option>
-                </optgroup>
-                <optgroup label="Quarterly & Annual">
                   <option value={`Full Year ${currentYear}`}>Full Year {currentYear}</option>
-                  <option value={`Full Year ${currentYear - 1}`}>Full Year {currentYear - 1}</option>
                 </optgroup>
               </select>
               <ChevronDown size={14} className="est-select-chevron" />
@@ -472,24 +465,23 @@ const MonitoredEstablishments = () => {
                         className="est-card-date-select"
                         value={estDate}
                         onChange={(e) => handleCardDateChange(item.id, e.target.value)}
-                        aria-label={`Select date for ${item.name}`}
+                        aria-label={`Select month for ${item.name}`}
                       >
                         {customDates[item.id] && (
                           <option value={customDates[item.id]}>
                             {customDates[item.id]}
                           </option>
                         )}
+                        <optgroup label="Monthly Reporting (DOT Standard)">
+                          <option value="October 2026">October 2026</option>
+                          <option value="November 2026">November 2026</option>
+                          <option value="September 2026">September 2026</option>
+                          <option value="August 2026">August 2026</option>
+                        </optgroup>
                         <optgroup label="Quick Select">
                           <option value="Today">Today ({todayFormatted})</option>
-                          <option value="Yesterday">Yesterday ({yesterdayFormatted})</option>
-                        </optgroup>
-                        <optgroup label="Periods">
-                          <option value="This Week">This Week</option>
                           <option value="This Month">This Month ({thisMonthFormatted})</option>
-                        </optgroup>
-                        <optgroup label="Quarterly & Annual">
                           <option value={`Full Year ${currentYear}`}>Full Year {currentYear}</option>
-                          <option value={`Full Year ${currentYear - 1}`}>Full Year {currentYear - 1}</option>
                         </optgroup>
                         <optgroup label="Custom">
                           <option value="custom">📅 Pick Exact Date...</option>
