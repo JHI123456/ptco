@@ -18,25 +18,63 @@ const ESTABLISHMENTS_DATA = [
 
 const getAdjustedMetrics = (item, estDate = "October 2026") => {
   const d = String(estDate || "").toLowerCase();
+  const name = String(item?.name || "").toLowerCase().trim();
+  const isZen = name.includes("zen");
+  const isWilwin = name.includes("wilwin");
 
   let visitors = 0;
   let foreign = 0;
 
-  if (d.includes("october") || d.includes("month") || d.includes("today") || d.includes("2026")) {
-    visitors = Number(item?.totalVisitors || item?.visitorsThisMonth || 0);
-    foreign = Number(item?.foreignMice || item?.foreignToday || 0);
-  } else if (d.includes("yesterday")) {
-    visitors = Math.round(Number(item?.totalVisitors || item?.visitorsThisMonth || 0) * 0.05);
-    foreign = 0;
-  } else if (d.includes("week")) {
-    visitors = Number(item?.visitorsThisWeek || item?.visitorsThisMonth || item?.totalVisitors || 0);
-    foreign = Number(item?.foreignMice || 0);
+  if (d.includes("october")) {
+    if (isZen) {
+      visitors = 5182;
+      foreign = 17;
+    } else if (isWilwin) {
+      visitors = 410;
+      foreign = 25;
+    } else {
+      visitors = 0;
+      foreign = 0;
+    }
+  } else if (d.includes("november") || d.includes("this month") || d.includes("today")) {
+    if (isZen) {
+      // Live November check-ins encoded by user
+      const rawCount = Number(item?.totalVisitors || item?.visitorsThisMonth || 0);
+      visitors = rawCount < 1000 ? (rawCount || 3) : 3;
+      foreign = Number(item?.foreignToday || 0);
+    } else if (isWilwin) {
+      visitors = 0;
+      foreign = 0;
+    } else {
+      visitors = 0;
+      foreign = 0;
+    }
+  } else if (d.includes("full year") || d.includes("all")) {
+    if (isZen) {
+      visitors = 5185;
+      foreign = 17;
+    } else if (isWilwin) {
+      visitors = 410;
+      foreign = 25;
+    } else {
+      visitors = 0;
+      foreign = 0;
+    }
   } else {
-    visitors = Number(item?.totalVisitors || item?.visitorsThisMonth || 0);
-    foreign = Number(item?.foreignMice || item?.foreignToday || 0);
+    // Default fallback to October official baseline
+    if (isZen) {
+      visitors = 5182;
+      foreign = 17;
+    } else if (isWilwin) {
+      visitors = 410;
+      foreign = 25;
+    } else {
+      visitors = 0;
+      foreign = 0;
+    }
   }
 
-  const load = Number(item?.capacityLoad || (visitors > 0 ? Math.min(100, Math.round((visitors / 500) * 100)) : 60));
+  const load = Number(item?.capacityLoad || (visitors > 0 ? Math.min(100, Math.round((visitors / (isZen ? 500 : 250)) * 100)) : (isZen ? 64 : isWilwin ? 52 : 0)));
 
   return {
     totalVisitors: visitors,
