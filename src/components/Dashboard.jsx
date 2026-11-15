@@ -147,18 +147,23 @@ const Dashboard = ({ user, onLogout }) => {
           })();
 
           // Filter to only registered LGUs (Bayombong active, others upon registering and approval)
-          const registeredOnly = list.filter((d) => {
-            const name = (d.name || d.municipality || "").toLowerCase().trim();
-            if (d.status === "Pending Verification") return false;
-            const isApproved = approvedMunis.some(m => m.toLowerCase() === name || name.includes(m.toLowerCase()));
-            if (name.includes("alfonso") && !isApproved && d.status !== "Optimal") {
-              return false;
-            }
-            const hasVisitors = (Number(d.totalVisitors) || 0) > 0;
-            const hasEsts = Number(d.intel?.registeredSites ?? d.establishments ?? 0) > 0;
-            const isRegistered = Boolean(d.isRegistered || d.registered || d.hasAccount || isApproved);
-            return name === "bayombong" || hasVisitors || hasEsts || isRegistered;
-          });
+          const registeredOnly = list
+            .filter((d) => {
+              const name = (d.name || d.municipality || "").toLowerCase().trim();
+              if (d.status === "Pending Verification") return false;
+              const isApproved = approvedMunis.some(m => m.toLowerCase() === name || name.includes(m.toLowerCase()));
+              if (name.includes("alfonso") && !isApproved && d.status !== "Optimal") {
+                return false;
+              }
+              const hasVisitors = (Number(d.totalVisitors) || 0) > 0;
+              const hasEsts = Number(d.intel?.registeredSites ?? d.establishments ?? 0) > 0;
+              const isRegistered = Boolean(d.isRegistered || d.registered || d.hasAccount || isApproved);
+              return name === "bayombong" || hasVisitors || hasEsts || isRegistered;
+            })
+            .map((d) => ({
+              ...d,
+              isRegistered: true,
+            }));
           setRegisteredLgus(registeredOnly);
         }
       });

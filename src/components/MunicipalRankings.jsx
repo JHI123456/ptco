@@ -26,14 +26,21 @@ const MunicipalRankings = ({ initialCount = 3, lgus: propLgus = null }) => {
   const rankedList = React.useMemo(() => {
     if (!Array.isArray(lgus) || lgus.length === 0) return [];
 
-    // Filter to only include registered municipalities with an account or active visitors
-    const registeredOnly = lgus.filter((item) => {
-      const name = (item.name || item.municipality || "").toLowerCase().trim();
-      const isRegistered = item.isRegistered || item.registered || item.hasAccount || false;
-      const hasVisitors = (Number(item.totalVisitors) || 0) > 0;
-      const isBayombong = name === "bayombong";
-      return isBayombong || isRegistered || hasVisitors;
-    });
+    // If propLgus is provided from the parent Dashboard, it is already filtered and verified
+    const registeredOnly = propLgus !== null
+      ? lgus
+      : lgus.filter((item) => {
+          const name = (item.name || item.municipality || "").toLowerCase().trim();
+          const approvedMunis = (() => {
+            try { return JSON.parse(localStorage.getItem("turismotrack_approved_munis") || "[]"); }
+            catch { return []; }
+          })();
+          const isApproved = approvedMunis.some(m => m.toLowerCase() === name || name.includes(m.toLowerCase()));
+          const isRegistered = item.isRegistered || item.registered || item.hasAccount || isApproved || item.status === "Optimal";
+          const hasVisitors = (Number(item.totalVisitors) || 0) > 0;
+          const isBayombong = name === "bayombong";
+          return isBayombong || isRegistered || hasVisitors;
+        });
 
     const sorted = [...registeredOnly].sort((a, b) => {
       const vA = Number(a.totalVisitors) || 0;
