@@ -130,10 +130,54 @@ const Dashboard = ({ user, onLogout }) => {
       fetchUsers().then((data) => {
         if (isMounted) {
           const raw = Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : []);
-          const registeredUsers = raw.filter((u) => {
-            const m = (u.municipality || "").toLowerCase();
-            return m.includes("bayombong") || u.isRegistered;
+          const approvedMunis = (() => {
+            try {
+              return JSON.parse(localStorage.getItem("turismotrack_approved_munis") || "[]");
+            } catch { return []; }
+          })();
+
+          // Deduplicate by municipality and prioritize primary official accounts
+          const seenMunis = new Set();
+          const registeredUsers = [];
+
+          // Sort so primary official account (e.g. bayombong@gmail.com) takes precedence
+          const sorted = [...raw].sort((a, b) => {
+            if ((a.email || "").toLowerCase() === "bayombong@gmail.com") return -1;
+            if ((b.email || "").toLowerCase() === "bayombong@gmail.com") return 1;
+            return 0;
           });
+
+          for (const u of sorted) {
+            const m = (u.municipality || "").toLowerCase().trim();
+            const isApproved = approvedMunis.some(appr => appr.toLowerCase() === m || m.includes(appr.toLowerCase()));
+            const isBayombong = m.includes("bayombong");
+
+            if ((isBayombong || isApproved || u.isRegistered) && !seenMunis.has(m)) {
+              seenMunis.add(m);
+              registeredUsers.push({
+                ...u,
+                status: "Active",
+                isRegistered: true,
+              });
+            }
+          }
+
+          // Ensure approved Alfonso Castañeda is displayed in the Users directory
+          const hasAlfonso = seenMunis.has("alfonso castañeda") || seenMunis.has("alfonso castaneda") || seenMunis.has("alfonso");
+          const isAlfonsoApproved = approvedMunis.some(appr => appr.toLowerCase().includes("alfonso"));
+          if (isAlfonsoApproved && !hasAlfonso) {
+            registeredUsers.push({
+              id: "muni-alfonso",
+              name: "Alfonso Castañeda Municipal Tourism Office",
+              municipality: "Alfonso Castañeda",
+              role: "Municipality Admin",
+              email: "alfonso@gmail.com",
+              phone: "+63 (078) 321-2311",
+              status: "Active",
+              isRegistered: true,
+            });
+          }
+
           setOfficers(registeredUsers);
         }
       });
