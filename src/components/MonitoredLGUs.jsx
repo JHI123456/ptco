@@ -267,13 +267,15 @@
     const totalMonitoredCount = `${lgus.length}`;
     const totalProvinceVisitors = lgus
       .reduce((sum, lgu) => {
-        const d = cardDates[lgu.id] || globalDate;
+        const id = lgu._id || lgu.id;
+        const d = cardDates[id] || globalDate;
         const m = getAdjustedMetrics(lgu, d);
         return sum + m.totalVisitors;
       }, 0)
       .toLocaleString();
     const capacityAlertsCount = lgus.filter((l) => {
-      const d = cardDates[l.id] || globalDate;
+      const id = l._id || l.id;
+      const d = cardDates[id] || globalDate;
       const m = getAdjustedMetrics(l, d);
       return m.capacityLoad >= 80;
     }).length;
@@ -467,26 +469,27 @@
         ) : (
           <div className="lgu-cards-grid">
             {filteredLGUs.map((lgu) => {
-            const lguDate = cardDates[lgu.id] || globalDate;
+            const lguId = lgu._id || lgu.id;
+            const lguDate = cardDates[lguId] || globalDate;
             const metrics = getAdjustedMetrics(lgu, lguDate);
             const isAlert = metrics.capacityLoad >= 80;
             const isGreen = metrics.capacityLoad < 60;
             const barClass = isAlert ? "bar-alert" : isGreen ? "bar-green" : "bar-blue";
 
             return (
-              <div key={lgu.id} className="lgu-card">
+              <div key={lguId} className="lgu-card">
                 {/* Top District Badge & Date Filter */}
                 <div className="lgu-card-top">
                   <span className={`lgu-district-badge ${lgu.badgeColor}`}>
                     {lgu.districtLabel}
                   </span>
 
-                  {activeCustomCardId === lgu.id ? (
+                  {activeCustomCardId === lguId ? (
                     <div className="lgu-card-custom-picker">
                       <input
                         type="date"
                         defaultValue="2026-09-25"
-                        onChange={(e) => handleCustomDateSubmit(lgu.id, e.target.value)}
+                        onChange={(e) => handleCustomDateSubmit(lguId, e.target.value)}
                         className="lgu-custom-date-native"
                         autoFocus
                       />
@@ -509,12 +512,12 @@
                       <select
                         className="lgu-card-date-select"
                         value={lguDate}
-                        onChange={(e) => handleCardDateChange(lgu.id, e.target.value)}
+                        onChange={(e) => handleCardDateChange(lguId, e.target.value)}
                         aria-label={`Select month for ${lgu.name}`}
                       >
-                        {customDates[lgu.id] && (
-                          <option value={customDates[lgu.id]}>
-                            {customDates[lgu.id]}
+                        {customDates[lguId] && (
+                          <option value={customDates[lguId]}>
+                            {customDates[lguId]}
                           </option>
                         )}
                         <optgroup label="Monthly Reporting (DOT Standard)">

@@ -248,13 +248,15 @@ const MonitoredEstablishments = () => {
   const totalMonitored = establishments.length > 0 ? `${establishments.length} / ${establishments.length + 4}` : "0";
   const totalProvinceGuests = establishments
     .reduce((sum, est) => {
-      const d = cardDates[est.id] || globalDate;
+      const id = est._id || est.id;
+      const d = cardDates[id] || globalDate;
       const m = getAdjustedMetrics(est, d);
       return sum + m.totalVisitors;
     }, 0)
     .toLocaleString();
   const capacityAlertsCount = establishments.filter((e) => {
-    const d = cardDates[e.id] || globalDate;
+    const id = e._id || e.id;
+    const d = cardDates[id] || globalDate;
     const m = getAdjustedMetrics(e, d);
     return m.capacityLoad >= 80;
   }).length;
@@ -474,12 +476,12 @@ const MonitoredEstablishments = () => {
                     {item.districtLabel || (item.municipality ? item.municipality.toUpperCase() + " DISTRICT" : "CENTRAL DISTRICT")}
                   </span>
 
-                  {activeCustomCardId === item.id ? (
+                  {activeCustomCardId === itemId ? (
                     <div className="est-card-custom-picker">
                       <input
                         type="date"
                         defaultValue="2026-09-25"
-                        onChange={(e) => handleCustomDateSubmit(item.id, e.target.value)}
+                        onChange={(e) => handleCustomDateSubmit(itemId, e.target.value)}
                         className="est-custom-date-native"
                         autoFocus
                       />
@@ -502,12 +504,12 @@ const MonitoredEstablishments = () => {
                       <select
                         className="est-card-date-select"
                         value={estDate}
-                        onChange={(e) => handleCardDateChange(item.id, e.target.value)}
+                        onChange={(e) => handleCardDateChange(itemId, e.target.value)}
                         aria-label={`Select month for ${item.name}`}
                       >
-                        {customDates[item.id] && (
-                          <option value={customDates[item.id]}>
-                            {customDates[item.id]}
+                        {customDates[itemId] && (
+                          <option value={customDates[itemId]}>
+                            {customDates[itemId]}
                           </option>
                         )}
                         <optgroup label="Monthly Reporting (DOT Standard)">
