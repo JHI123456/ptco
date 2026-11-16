@@ -5,10 +5,10 @@ import {
   RotateCcw,
   Zap,
   CheckCircle2,
-  RefreshCw
+  Trash2
 } from 'lucide-react';
 import './TourismForms.css';
-import { fetchVisitorAnalytics, fetchLGUs, API_BASE_URL } from '../services/api';
+import { fetchVisitorAnalytics, API_BASE_URL } from '../services/api';
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -40,7 +40,7 @@ export default function TourismForms({ user }) {
               <span className="tf-badge-official">DOT Standard</span>
             </h2>
             <p>
-              Standard government filing forms for Provincial Tourism Attraction Visitor Recording (VAR 2 / VAR 2P) and Provincial Municipal Reporting.
+              Standard blank government filing forms for Provincial Tourism Attraction Visitor Recording (VAR 2 / VAR 2P) and Provincial Municipal Reporting.
             </p>
           </div>
 
@@ -102,7 +102,7 @@ export default function TourismForms({ user }) {
         </div>
       )}
 
-      {/* Render the Active Official Provincial Form */}
+      {/* Render the Active Official Provincial Form - 100% Clean and Blank */}
       {activeFormTab === 'VAR2' && <VAR2Form onNotify={showToast} />}
       {activeFormTab === 'PROVINCIAL_LGU' && <ProvincialLGUForm onNotify={showToast} />}
     </div>
@@ -112,7 +112,7 @@ export default function TourismForms({ user }) {
 /* ==========================================================================
    1. VAR 2 / VAR 2P: Tourism Attraction Visitor Record (Monthly Consolidation)
    Matches Images 4, 5, 7
-   Supports Auto-Syncing & Totalling of Bayombong & LGU Live Submissions
+   100% Clean Blank Form - NO hardcoded numbers
    ========================================================================== */
 function VAR2Form({ onNotify }) {
   const [meta, setMeta] = useState({
@@ -246,7 +246,7 @@ function VAR2Form({ onNotify }) {
     }
   ], []);
 
-  // State mapping for rows data: { [key]: { thisProvMale, thisProvFemale, otherProvMale, otherProvFemale, foreignMale, foreignFemale } }
+  // 100% Clean Blank State: NO DATA
   const [dataStore, setDataStore] = useState({});
 
   const handleCellChange = (key, field, value) => {
@@ -259,67 +259,58 @@ function VAR2Form({ onNotify }) {
     }));
   };
 
-  const handleReset = () => {
+  const handleClearAllData = () => {
     setMeta({ monthYear: '', municipality: 'NUEVA VIZCAYA', preparedBy: '', notedBy: '' });
     setDataStore({});
-    onNotify('VAR 2 Form cleared to blank.');
+    try {
+      localStorage.removeItem('turismotrack_visitor_dataset');
+    } catch {}
+    onNotify('Naalis na po ang lahat ng data. 100% blangko ang form.');
   };
 
-  // Automatic Data Sync & Totaling for Bayombong & other LGUs
+  // Live Auto-Sync: ONLY pulls from real submissions in the database
   const handleAutoFillBayombong = async () => {
     try {
-      setMeta((prev) => ({
-        ...prev,
-        monthYear: prev.monthYear || 'October 2026',
-        municipality: 'NUEVA VIZCAYA'
-      }));
+      const res = await fetch(`${API_BASE_URL}/inbox`, {
+        headers: { 'x-user-role': 'provincial', 'x-user-municipality': 'all' }
+      });
+      let submissions = [];
+      if (res.ok) {
+        const json = await res.json();
+        const raw = Array.isArray(json?.data) ? json.data : (Array.isArray(json) ? json : []);
+        submissions = raw.filter((s) => {
+          const muni = String(s.municipality || s.municipalityId || s.sender || '').toLowerCase();
+          return muni.includes('bayombong');
+        });
+      }
 
-      // In Bayombong, official filed tourist volume: 5,592 visitors (Zen Hotel 5,182 + Wilwin 410)
-      // Populates Bayombong's primary municipal attractions with calculated totals
-      setDataStore((prev) => {
-        const next = { ...prev };
-        next['BAYOMBONG_0'] = {
-          code: 'REG-2026-9861',
-          thisProvMale: '650',
-          thisProvFemale: '710',
-          otherProvMale: '580',
-          otherProvFemale: '610',
-          foreignMale: '5',
-          foreignFemale: '4',
+      if (submissions.length === 0) {
+        setDataStore({});
+        onNotify('Walang nakitang submissions para sa Bayombong sa database. Nananatiling blangko ang form.');
+        return;
+      }
+
+      // Populate from actual live submissions only
+      const next = {};
+      submissions.forEach((s, idx) => {
+        const rowKey = `BAYOMBONG_${idx}`;
+        const formData = s.formData || {};
+        next[rowKey] = {
+          code: formData.code || s.details?.code || '',
+          thisProvMale: String(formData.thisProvMale || ''),
+          thisProvFemale: String(formData.thisProvFemale || ''),
+          otherProvMale: String(formData.otherProvMale || ''),
+          otherProvFemale: String(formData.otherProvFemale || ''),
+          foreignMale: String(formData.foreignMale || ''),
+          foreignFemale: String(formData.foreignFemale || ''),
         };
-        next['BAYOMBONG_1'] = {
-          code: 'REG-2026-9862',
-          thisProvMale: '590',
-          thisProvFemale: '640',
-          otherProvMale: '690',
-          otherProvFemale: '700',
-          foreignMale: '4',
-          foreignFemale: '3',
-        };
-        next['BAYOMBONG_2'] = {
-          code: 'REG-2026-9863',
-          thisProvMale: '180',
-          thisProvFemale: '210',
-          otherProvMale: '340',
-          otherProvFemale: '390',
-          foreignMale: '1',
-          foreignFemale: '0',
-        };
-        next['BAYOMBONG_3'] = {
-          code: 'REG-2026-9864',
-          thisProvMale: '120',
-          thisProvFemale: '150',
-          otherProvMale: '140',
-          otherProvFemale: '180',
-          foreignMale: '0',
-          foreignFemale: '0',
-        };
-        return next;
       });
 
-      onNotify('Awtomatikong na-total at naipasok ang datos ng Bayombong (5,592 arrivals)!');
+      setDataStore(next);
+      onNotify(`Awtomatikong na-total ang ${submissions.length} submission(s) mula sa Bayombong!`);
     } catch (e) {
-      onNotify('Naipasok ang datos ng Bayombong.');
+      setDataStore({});
+      onNotify('Walang nakitang submissions. Nananatiling blangko ang form.');
     }
   };
 
@@ -412,14 +403,14 @@ function VAR2Form({ onNotify }) {
           type="button"
           className="tf-btn tf-btn-primary"
           onClick={handleAutoFillBayombong}
-          title="Kuhanin at i-total nang kusa ang live records ng Bayombong"
+          title="Kuhanin at i-total nang kusa ang totoong submissions ng Bayombong"
         >
           <Zap size={14} />
           Auto-Total Bayombong Submissions
         </button>
 
-        <button type="button" className="tf-btn tf-btn-secondary" onClick={handleReset}>
-          <RotateCcw size={14} /> Clear Form
+        <button type="button" className="tf-btn tf-btn-danger" onClick={handleClearAllData}>
+          <Trash2 size={14} /> Remove All Data / Reset
         </button>
       </div>
 
@@ -719,7 +710,7 @@ function VAR2Form({ onNotify }) {
 /* ==========================================================================
    2. PROVINCIAL ANNUAL REPORT: Same Day Visitors by Municipality
    Matches Image 8 (Nueva Vizcaya Official Provincial Submission Sheet)
-   Supports 1-Click Auto-Totaling across Bayombong & All Municipalities
+   100% Clean Blank Form - NO hardcoded numbers
    ========================================================================== */
 function ProvincialLGUForm({ onNotify }) {
   const [meta, setMeta] = useState({
@@ -742,7 +733,7 @@ function ProvincialLGUForm({ onNotify }) {
     'STA FE'
   ], []);
 
-  // Data: { [monthIdx]: { [muni]: { d: '', f: '' } } }
+  // 100% Clean Blank State: NO DATA
   const [dataStore, setDataStore] = useState({});
 
   const handleCellChange = (mIdx, muni, field, val) => {
@@ -762,7 +753,7 @@ function ProvincialLGUForm({ onNotify }) {
     });
   };
 
-  const handleReset = () => {
+  const handleClearAllData = () => {
     setMeta({
       province: 'NUEVA VIZCAYA',
       period: '',
@@ -772,65 +763,68 @@ function ProvincialLGUForm({ onNotify }) {
       notedByTitle: 'Sup. Tourism Operations Officer'
     });
     setDataStore({});
-    onNotify('Provincial LGU Form cleared to blank.');
+    try {
+      localStorage.removeItem('turismotrack_visitor_dataset');
+    } catch {}
+    onNotify('Naalis na po ang lahat ng data. 100% blangko ang form.');
   };
 
-  // Auto-Sync and Total Bayombong & LGU Live Municipal Data
+  // Auto-Sync ONLY from actual submissions in the database
   const handleAutoFillAllLGUs = async () => {
     try {
-      setMeta((prev) => ({
-        ...prev,
-        period: prev.period || 'January - December 2026'
-      }));
+      const res = await fetch(`${API_BASE_URL}/inbox`, {
+        headers: { 'x-user-role': 'provincial', 'x-user-municipality': 'all' }
+      });
+      let submissions = [];
+      if (res.ok) {
+        const json = await res.json();
+        submissions = Array.isArray(json?.data) ? json.data : (Array.isArray(json) ? json : []);
+      }
 
-      const analytics = await fetchVisitorAnalytics();
-      const dataset = analytics?.data || (() => {
-        try { return JSON.parse(localStorage.getItem('turismotrack_visitor_dataset') || '{}'); }
-        catch { return {}; }
-      })();
+      if (submissions.length === 0) {
+        setDataStore({});
+        onNotify('Walang nakitang submissions sa database. Nananatiling blangko ang form.');
+        return;
+      }
 
+      // Group submissions by municipality and month
       const nextStore = {};
-
       MONTH_NAMES.forEach((_, mIdx) => {
         nextStore[mIdx] = {};
-
-        // Bayombong records (e.g. October 5,575 domestic, 17 foreign = 5,592 total)
-        const bayombongMonth = dataset?.['Bayombong']?.[mIdx];
-        if (bayombongMonth && (bayombongMonth.domestic > 0 || bayombongMonth.foreign > 0)) {
-          nextStore[mIdx]['BAYOMBONG'] = {
-            d: String(bayombongMonth.domestic || 0),
-            f: String(bayombongMonth.foreign || 0)
-          };
-        } else if (mIdx === 9) { // October verified
-          nextStore[mIdx]['BAYOMBONG'] = {
-            d: '5575',
-            f: '17'
-          };
-        }
-
-        // Other LGUs if recorded
-        municipalities.forEach((m) => {
-          if (m !== 'BAYOMBONG') {
-            const munKey = Object.keys(dataset || {}).find(
-              (k) => k.toLowerCase().includes(m.toLowerCase()) || m.toLowerCase().includes(k.toLowerCase())
-            );
-            if (munKey && dataset[munKey]?.[mIdx]) {
-              const rec = dataset[munKey][mIdx];
-              if (rec.domestic > 0 || rec.foreign > 0) {
-                nextStore[mIdx][m] = {
-                  d: String(rec.domestic || 0),
-                  f: String(rec.foreign || 0)
-                };
-              }
-            }
-          }
-        });
       });
 
-      setDataStore(nextStore);
-      onNotify('Awtomatikong na-total at naipasok ang datos ng Bayombong at mga LGUs sa Form!');
+      let foundCount = 0;
+      submissions.forEach((s) => {
+        const muni = String(s.municipality || s.municipalityId || '').toUpperCase();
+        const matchingMuni = municipalities.find((m) => muni.includes(m) || m.includes(muni));
+        if (matchingMuni) {
+          const date = s.submittedAt ? new Date(s.submittedAt) : new Date();
+          const mIdx = date.getMonth();
+          const dCount = Number(s.details?.domesticGuests || s.formData?.localVisitors || s.formData?.domestic || 0);
+          const fCount = Number(s.details?.foreignGuests || s.formData?.foreignVisitors || s.formData?.foreign || 0);
+
+          if (dCount > 0 || fCount > 0) {
+            foundCount++;
+            const existingD = Number(nextStore[mIdx][matchingMuni]?.d || 0);
+            const existingF = Number(nextStore[mIdx][matchingMuni]?.f || 0);
+            nextStore[mIdx][matchingMuni] = {
+              d: String(existingD + dCount),
+              f: String(existingF + fCount)
+            };
+          }
+        }
+      });
+
+      if (foundCount === 0) {
+        setDataStore({});
+        onNotify('Walang nakitang datos ng bisita mula sa submissions. Blangko ang form.');
+      } else {
+        setDataStore(nextStore);
+        onNotify('Awtomatikong na-total ang datos mula sa mga submissions!');
+      }
     } catch (err) {
-      onNotify('Na-load ang data mula sa municipal submissions.');
+      setDataStore({});
+      onNotify('Nananatiling blangko ang form.');
     }
   };
 
@@ -868,14 +862,14 @@ function ProvincialLGUForm({ onNotify }) {
           type="button"
           className="tf-btn tf-btn-primary"
           onClick={handleAutoFillAllLGUs}
-          title="Awtomatikong i-total at ipasok ang live submissions ng Bayombong at LGUs"
+          title="Awtomatikong i-total ang totoong submissions ng Bayombong at LGUs"
         >
           <Zap size={14} />
           Auto-Total Bayombong & LGUs
         </button>
 
-        <button type="button" className="tf-btn tf-btn-secondary" onClick={handleReset}>
-          <RotateCcw size={14} /> Clear Form
+        <button type="button" className="tf-btn tf-btn-danger" onClick={handleClearAllData}>
+          <Trash2 size={14} /> Remove All Data / Reset
         </button>
       </div>
 
