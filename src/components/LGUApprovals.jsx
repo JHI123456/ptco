@@ -2,6 +2,14 @@ import React, { useState, useEffect, useCallback } from "react";
 import { ShieldCheck, CheckCircle2, XCircle, RefreshCw, Building2, MapPin, Mail, Calendar } from "lucide-react";
 import { API_BASE_URL } from "../services/api";
 
+const DEFAULT_ACTIVE_EMAILS = [
+  "tourism@bayombong.gov.ph",
+  "bayombongtourism@gmail.com",
+  "bayombong@gmail.com",
+  "ambaguio@gmail.com",
+  "solano@gmail.com"
+];
+
 export default function LGUApprovals({ user, onRefreshCount }) {
   const [pendingList, setPendingList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -28,29 +36,47 @@ export default function LGUApprovals({ user, onRefreshCount }) {
         }
       } catch (e) {}
 
-      // 2. Direct fallback from users endpoint for pending municipal accounts
-      if (list.length === 0) {
-        try {
-          const usersRes = await fetch(`${API_BASE_URL}/users?_t=${Date.now()}`);
-          if (usersRes.ok) {
-            const allUsers = await usersRes.json();
-            const raw = Array.isArray(allUsers) ? allUsers : (Array.isArray(allUsers?.data) ? allUsers.data : []);
-            list = raw.filter((u) => {
-              const role = String(u.role || "").toLowerCase();
-              const isMuni = role.includes("municipality") || role.includes("muni");
-              const status = String(u.status || "").toLowerCase();
-              const verif = String(u.verificationStatus || "").toLowerCase();
-              return isMuni && (status === "pending" || verif === "pending" || u.isRegistered === false);
-            });
-          }
-        } catch (e) {}
-      }
+      // 2. Fetch all municipal accounts from users endpoint
+      try {
+        const usersRes = await fetch(`${API_BASE_URL}/users?_t=${Date.now()}`);
+        if (usersRes.ok) {
+          const allUsers = await usersRes.json();
+          const raw = Array.isArray(allUsers) ? allUsers : (Array.isArray(allUsers?.data) ? allUsers.data : []);
+          raw.forEach((u) => {
+            const role = String(u.role || "").toLowerCase();
+            const isMuni = role.includes("municipality") || role.includes("muni");
+            const uEmail = String(u.email || "").toLowerCase().trim();
+            const status = String(u.status || "").toLowerCase();
+            const verif = String(u.verificationStatus || "").toLowerCase();
+
+            // Account is pending if explicitly pending OR newly registered municipal account not in default active list
+            const isPending = status === "pending" || verif === "pending" || u.isRegistered === false || !DEFAULT_ACTIVE_EMAILS.includes(uEmail);
+
+            if (isMuni && isPending) {
+              const alreadyInList = list.some(l => (l.email || "").toLowerCase() === uEmail || String(l._id || l.id) === String(u._id || u.id));
+              if (!alreadyInList) {
+                list.push({
+                  _id: u._id || u.id || `muni_${Date.now()}`,
+                  id: u.id || u._id,
+                  name: u.name || u.officeName || `${u.municipality || 'Municipal'} Tourism Office`,
+                  officeName: u.officeName || u.name || `${u.municipality || 'Municipal'} Tourism Office`,
+                  municipality: u.municipality || 'Alfonso Castañeda',
+                  email: u.email,
+                  role: u.role || 'Municipality Admin',
+                  status: 'pending',
+                  createdAt: u.createdAt || new Date().toISOString(),
+                });
+              }
+            }
+          });
+        }
+      } catch (e) {}
 
       // 3. Incorporate locally recorded pending registrations
       try {
         const storedPending = JSON.parse(localStorage.getItem("turismotrack_pending_munis") || "[]");
         storedPending.forEach((sp) => {
-          const spEmail = (sp.email || "").toLowerCase();
+          const spEmail = (sp.email || "").toLowerCase().trim();
           const alreadyInList = list.some((l) => (l.email || "").toLowerCase() === spEmail);
           if (!alreadyInList) {
             list.push({
@@ -68,35 +94,18 @@ export default function LGUApprovals({ user, onRefreshCount }) {
         });
       } catch (e) {}
 
-      // 4. Fallback for registered municipal accounts waiting for PTCO approval
-      const approvedMunis = (() => {
+      // 4. Filter out accounts that have already been approved by PTCO
+      const approvedAccounts = (() => {
         try {
-          return JSON.parse(localStorage.getItem("turismotrack_approved_munis") || "[]");
+          return JSON.parse(localStorage.getItem("turismotrack_approved_accounts") || "[]");
         } catch { return []; }
       })();
 
-      if (list.length === 0) {
-        const isAlfonsoApproved = approvedMunis.some(m => m.toLowerCase().includes("alfonso"));
-        if (!isAlfonsoApproved) {
-          list.push({
-            _id: "6af93a1a63a05146f11eed25",
-            id: "6af93a1a63a05146f11eed25",
-            name: "Alfonso Castañeda Municipal Tourism Office",
-            officeName: "Alfonso Castañeda Municipal Tourism Office",
-            municipality: "Alfonso Castañeda",
-            email: "alfonso@gmail.com",
-            role: "Municipality Admin",
-            status: "pending",
-            createdAt: "2026-11-15T04:50:34.807Z",
-          });
-        }
-      } else {
-        // filter out any locally approved munis from list
-        list = list.filter(item => {
-          const mName = (item.municipality || item.name || "").toLowerCase();
-          return !approvedMunis.some(am => am.toLowerCase() === mName || mName.includes(am.toLowerCase()));
-        });
-      }
+      list = list.filter(item => {
+        const email = (item.email || "").toLowerCase().trim();
+        const id = String(item._id || item.id || "");
+        return !approvedAccounts.includes(email) && !approvedAccounts.includes(id);
+      });
 
       setPendingList(list);
       if (onRefreshCount) onRefreshCount(list.length);
@@ -109,32 +118,47 @@ export default function LGUApprovals({ user, onRefreshCount }) {
 
   useEffect(() => {
     fetchPending();
+    let ch = null;
+    if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+      try {
+        ch = new BroadcastChannel("turismotrack_realtime");
+        ch.onmessage = (event) => {
+          if (event.data?.type?.includes("municipal") || event.data?.type?.includes("user")) {
+            fetchPending();
+          }
+        };
+      } catch {}
+    }
+    const interval = setInterval(fetchPending, 4000);
+    return () => {
+      if (ch) ch.close();
+      clearInterval(interval);
+    };
   }, [fetchPending]);
 
-  const handleApprove = async (id, muniName) => {
+  const handleApprove = async (id, muniName, email) => {
     if (!window.confirm(`Aprubahan at i-activate ang Municipal Tourism Office ng "${muniName}"? Magkakaroon na sila ng access sa Municipal Portal.`)) return;
     setActionLoadingId(id);
     try {
       fetch(`${API_BASE_URL}/auth/approve-municipal/${id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ approvedBy: user?.name || "Provincial Tourism Officer (PTCO)" }),
+        body: JSON.stringify({ approvedBy: user?.name || "Provincial Tourism Officer (PTCO)", email }),
       }).catch(() => {});
 
       try {
-        const approved = JSON.parse(localStorage.getItem("turismotrack_approved_munis") || "[]");
-        if (!approved.some(m => m.toLowerCase() === muniName.toLowerCase())) {
-          approved.push(muniName);
-          localStorage.setItem("turismotrack_approved_munis", JSON.stringify(approved));
-        }
+        const approved = JSON.parse(localStorage.getItem("turismotrack_approved_accounts") || "[]");
+        if (email && !approved.includes(email.toLowerCase().trim())) approved.push(email.toLowerCase().trim());
+        if (id && !approved.includes(String(id))) approved.push(String(id));
+        localStorage.setItem("turismotrack_approved_accounts", JSON.stringify(approved));
       } catch (e) {}
 
-      const updated = pendingList.filter(p => p._id !== id && (p.municipality || "").toLowerCase() !== muniName.toLowerCase());
+      const updated = pendingList.filter(p => p._id !== id && p.id !== id && (email ? (p.email || "").toLowerCase() !== email.toLowerCase() : true));
       setPendingList(updated);
       if (onRefreshCount) onRefreshCount(updated.length);
 
       showToast(`✅ Naaprubahan na ang Munisipalidad ng ${muniName}! Maaari na silang mag-log in.`);
-      window.dispatchEvent(new CustomEvent("tt-muni-approved", { detail: { municipality: muniName } }));
+      window.dispatchEvent(new CustomEvent("tt-muni-approved", { detail: { municipality: muniName, email } }));
     } catch {
       showToast("❌ Network error habang nag-aapruba.");
     } finally {
@@ -142,7 +166,7 @@ export default function LGUApprovals({ user, onRefreshCount }) {
     }
   };
 
-  const handleReject = async (id, muniName) => {
+  const handleReject = async (id, muniName, email) => {
     if (!window.confirm(`Sigurado ka bang tatanggihan ang registration ng Munisipalidad ng "${muniName}"?`)) return;
     setActionLoadingId(id);
     try {
@@ -151,14 +175,13 @@ export default function LGUApprovals({ user, onRefreshCount }) {
       }).catch(() => {});
 
       try {
-        const rejected = JSON.parse(localStorage.getItem("turismotrack_rejected_munis") || "[]");
-        if (!rejected.includes(muniName)) {
-          rejected.push(muniName);
-          localStorage.setItem("turismotrack_rejected_munis", JSON.stringify(rejected));
-        }
+        const rejected = JSON.parse(localStorage.getItem("turismotrack_rejected_accounts") || "[]");
+        if (email && !rejected.includes(email.toLowerCase().trim())) rejected.push(email.toLowerCase().trim());
+        if (id && !rejected.includes(String(id))) rejected.push(String(id));
+        localStorage.setItem("turismotrack_rejected_accounts", JSON.stringify(rejected));
       } catch (e) {}
 
-      const updated = pendingList.filter(p => p._id !== id && (p.municipality || "").toLowerCase() !== muniName.toLowerCase());
+      const updated = pendingList.filter(p => p._id !== id && p.id !== id && (email ? (p.email || "").toLowerCase() !== email.toLowerCase() : true));
       setPendingList(updated);
       if (onRefreshCount) onRefreshCount(updated.length);
 
@@ -357,7 +380,7 @@ export default function LGUApprovals({ user, onRefreshCount }) {
                   <button
                     type="button"
                     disabled={isProcessing}
-                    onClick={() => handleApprove(item._id, item.municipality)}
+                    onClick={() => handleApprove(item._id || item.id, item.municipality, item.email)}
                     style={{
                       flex: 1,
                       padding: "9px 14px",
@@ -382,7 +405,7 @@ export default function LGUApprovals({ user, onRefreshCount }) {
                   <button
                     type="button"
                     disabled={isProcessing}
-                    onClick={() => handleReject(item._id, item.municipality)}
+                    onClick={() => handleReject(item._id || item.id, item.municipality, item.email)}
                     style={{
                       padding: "9px 14px",
                       borderRadius: "8px",
