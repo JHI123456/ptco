@@ -664,14 +664,21 @@ function ProvincialLGUForm({ onNotify }) {
   });
 
   const municipalities = useMemo(() => [
-    'A. CASTAÑEDA',
+    'ALFONSO CASTAÑEDA',
+    'AMBAGUIO',
+    'ARITAO',
     'BAGABAG',
+    'BAMBANG',
     'BAYOMBONG',
     'DIADI',
+    'DUPAX DEL NORTE',
+    'DUPAX DEL SUR',
     'KASIBU',
+    'KAYAPA',
     'QUEZON',
+    'SANTA FE',
     'SOLANO',
-    'STA FE'
+    'VILLAVERDE'
   ], []);
 
   // 100% Clean Blank State: NO DATA
@@ -750,27 +757,27 @@ function ProvincialLGUForm({ onNotify }) {
         <table className="tf-table">
           <thead>
             <tr>
-              <th rowSpan={2} className="tf-th-yellow" style={{ width: 95 }}>Month</th>
+              <th rowSpan={2} className="tf-th-yellow" style={{ width: 95, minWidth: 90 }}>Month</th>
               {municipalities.map((muni) => (
-                <th key={muni} colSpan={3} className="tf-th-yellow">
+                <th key={muni} colSpan={3} className="tf-th-yellow" style={{ minWidth: 96, fontSize: '10px' }}>
                   {muni}
                 </th>
               ))}
-              <th colSpan={3} className="tf-th-yellow">
+              <th colSpan={3} className="tf-th-yellow" style={{ minWidth: 110 }}>
                 Grand Total Visitors
               </th>
             </tr>
             <tr>
               {municipalities.map((muni) => (
                 <React.Fragment key={muni}>
-                  <th className="tf-th-sub" style={{ width: 34 }}>D</th>
-                  <th className="tf-th-sub" style={{ width: 34 }}>F</th>
-                  <th className="tf-th-sub" style={{ width: 44 }}>Total</th>
+                  <th className="tf-th-sub" style={{ width: 30, minWidth: 28, fontSize: '10px' }}>D</th>
+                  <th className="tf-th-sub" style={{ width: 30, minWidth: 28, fontSize: '10px' }}>F</th>
+                  <th className="tf-th-sub" style={{ width: 36, minWidth: 32, fontSize: '10px' }}>Total</th>
                 </React.Fragment>
               ))}
-              <th className="tf-th-sub" style={{ width: 50 }}>Domestic</th>
-              <th className="tf-th-sub" style={{ width: 50 }}>Foreign</th>
-              <th className="tf-th-sub" style={{ width: 56 }}>Total</th>
+              <th className="tf-th-sub" style={{ width: 44, fontSize: '10.5px' }}>Domestic</th>
+              <th className="tf-th-sub" style={{ width: 44, fontSize: '10.5px' }}>Foreign</th>
+              <th className="tf-th-sub" style={{ width: 48, fontSize: '10.5px' }}>Total</th>
             </tr>
           </thead>
 
