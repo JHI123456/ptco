@@ -175,7 +175,7 @@ const Dashboard = ({ user, onLogout }) => {
               municipality: "Alfonso Castañeda",
               role: "Municipality Admin",
               email: "alfonso@gmail.com",
-              phone: "+63 (078) 321-2311",
+              phone: "—",
               status: "Active",
               isRegistered: true,
             });
@@ -730,7 +730,7 @@ const Dashboard = ({ user, onLogout }) => {
                               {officer.email}
                             </a>
                           </td>
-                          <td>{officer.phone}</td>
+                          <td>{officer.phone && officer.phone !== '+63 (078) 321-2311' ? officer.phone : '—'}</td>
                           <td>
                             <span className="badge-status-active">Active</span>
                           </td>
