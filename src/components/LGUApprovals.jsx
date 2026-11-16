@@ -21,8 +21,8 @@ export default function LGUApprovals({ user, onRefreshCount }) {
     setTimeout(() => setToast(null), 4000);
   };
 
-  const fetchPending = useCallback(async () => {
-    setLoading(true);
+  const fetchPending = useCallback(async (isSilent = false) => {
+    if (!isSilent) setLoading(true);
     try {
       let list = [];
       // 1. Try dedicated pending approvals endpoint
@@ -124,24 +124,24 @@ export default function LGUApprovals({ user, onRefreshCount }) {
     } catch (err) {
       console.error("Failed to fetch pending municipal accounts:", err);
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   }, [onRefreshCount]);
 
   useEffect(() => {
-    fetchPending();
+    fetchPending(false);
     let ch = null;
     if (typeof window !== "undefined" && "BroadcastChannel" in window) {
       try {
         ch = new BroadcastChannel("turismotrack_realtime");
         ch.onmessage = (event) => {
           if (event.data?.type?.includes("municipal") || event.data?.type?.includes("user")) {
-            fetchPending();
+            fetchPending(true);
           }
         };
       } catch {}
     }
-    const interval = setInterval(fetchPending, 4000);
+    const interval = setInterval(() => fetchPending(true), 20000);
     return () => {
       if (ch) ch.close();
       clearInterval(interval);
@@ -276,7 +276,7 @@ export default function LGUApprovals({ user, onRefreshCount }) {
 
         <button
           type="button"
-          onClick={fetchPending}
+          onClick={() => fetchPending(false)}
           style={{
             padding: "8px 16px",
             borderRadius: "8px",
