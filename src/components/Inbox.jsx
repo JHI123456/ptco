@@ -40,17 +40,28 @@ export default function Inbox({ user: _user }) {
         headers: {
           'x-user-role': 'provincial',
           'x-user-municipality': 'all',
+          'x-user-id': 'provincial-ptco',
+          'x-user-name': 'Provincial Tourism Officer',
         },
       });
       if (res.ok) {
         const json = await res.json();
         const rawItems = Array.isArray(json?.data) ? json.data : (Array.isArray(json) ? json : []);
-        // Provincial Office ONLY sees official consolidated municipal reports (e.g. VAR 2, municipal filings)
-        // Individual accommodation filings (Form A, DAE-1A, DAE-3B2, CUS, DOT, Holiday) are for the Municipality ONLY!
+        // Provincial Office sees official consolidated municipal reports (e.g. VAR 2, municipal filings)
+        // and provincial dispatches / broadcast memos sent to LGUs.
         const items = rawItems.filter((s) => {
           const fType = String(s.formType || '').toUpperCase();
           const senderRole = String(s.senderRole || '').toLowerCase();
           const sender = String(s.sender || s.establishmentName || s.senderName || '').toLowerCase();
+
+          // Provincial notices / broadcast memos are ALWAYS allowed and visible
+          const isProvincialSender =
+            senderRole.includes('provincial') ||
+            sender.includes('ptco') ||
+            s.senderId === 'provincial-ptco' ||
+            s.category === 'broadcast' ||
+            s.type === 'broadcast';
+          if (isProvincialSender) return true;
 
           const isEstForm = [
             'FORM A', 'DAE 1A', 'DAE 3B2', 'DAE 3B.2', 'DAE 2', 'DAE 4A', 'DOT', 'CUS', 'HOLIDAY', 'CHECK-IN', 'CHECKIN'
@@ -64,27 +75,35 @@ export default function Inbox({ user: _user }) {
         });
 
         if (items.length > 0) {
-          const normalized = items.map((s) => ({
-            id: s._id || s.id,
-            subject: s.subject || `${s.formType || 'Submission'}: ${s.establishmentName || s.sender || 'Municipal Submission'}`,
-            body: s.body || `Official submission for ${s.formType || 'Tourism compliance'} from ${s.municipality || s.municipalityId}. Recorded ${s.visitors || 0} visitors.`,
-            sender: s.sender || s.establishmentName || `${s.municipality || 'Municipal'} Tourism Office`,
-            municipality: s.municipality || s.municipalityId || '',
-            formType: s.formType || 'VAR 2',
-            category: 'submission',
-            status: (s.status || 'pending').toLowerCase().replace(/\s+/g, '-'),
-            date: s.submittedAt ? new Date(s.submittedAt).toLocaleString() : new Date().toLocaleString(),
-            unread: s.isRead === false,
-            isLocked: s.isLocked || false,
-            details: {
-              totalVisitors: s.visitors || s.formData?.grandTotal || 0,
-              domesticGuests: s.formData?.localVisitors || 0,
-              foreignGuests: s.formData?.foreignVisitors || 0,
-              reportingPeriod: s.formData?.monthYear || s.formData?.reportingPeriod || 'Sep-26',
-              complianceScore: '100%',
-            },
-            formData: s.formData,
-          }));
+          const normalized = items.map((s) => {
+            const isBroad = s.category === 'broadcast' || s.type === 'broadcast' || String(s.recipientId).includes('broadcast') || s.municipality === 'all' || s.recipient === 'All Municipalities' || s.recipientName === 'All Municipalities';
+            const itemCategory = s.category || (isBroad ? 'broadcast' : (s.type === 'message' ? 'message' : 'submission'));
+            return {
+              id: s._id || s.id,
+              subject: s.subject || `${s.formType || 'Submission'}: ${s.establishmentName || s.sender || 'Municipal Submission'}`,
+              body: s.body || `Official submission for ${s.formType || 'Tourism compliance'} from ${s.municipality || s.municipalityId}. Recorded ${s.visitors || 0} visitors.`,
+              sender: s.sender || s.senderName || s.establishmentName || `${s.municipality || 'Municipal'} Tourism Office`,
+              senderRole: s.senderRole || 'Municipal Tourism Officer',
+              recipient: s.recipient || s.recipientName || (isBroad ? 'All Municipalities' : `${s.municipality || 'Municipal'} Tourism Office`),
+              recipientName: s.recipientName || s.recipient || (isBroad ? 'All Municipalities' : `${s.municipality || 'Municipal'} Tourism Office`),
+              municipality: s.municipality || s.municipalityId || '',
+              formType: s.formType || (isBroad ? 'Broadcast' : 'VAR 2'),
+              category: itemCategory,
+              type: s.type || (isBroad ? 'message' : 'submission'),
+              status: (s.status || 'pending').toLowerCase().replace(/\s+/g, '-'),
+              date: s.submittedAt ? new Date(s.submittedAt).toLocaleString() : (s.createdAt ? new Date(s.createdAt).toLocaleString() : new Date().toLocaleString()),
+              unread: s.isRead === false,
+              isLocked: s.isLocked || false,
+              details: {
+                totalVisitors: s.visitors || s.formData?.grandTotal || 0,
+                domesticGuests: s.formData?.localVisitors || 0,
+                foreignGuests: s.formData?.foreignVisitors || 0,
+                reportingPeriod: s.formData?.monthYear || s.formData?.reportingPeriod || 'Sep-26',
+                complianceScore: '100%',
+              },
+              formData: s.formData,
+            };
+          });
           setMessages((prev) => {
             const combined = [...normalized];
             prev.forEach((p) => {
@@ -97,11 +116,6 @@ export default function Inbox({ user: _user }) {
             } catch {}
             return combined;
           });
-        } else {
-          setMessages([]);
-          try {
-            localStorage.removeItem('turismotrack_inbox_items');
-          } catch {}
         }
       }
     } catch (e) {
@@ -160,6 +174,7 @@ export default function Inbox({ user: _user }) {
   // Modals state
   const [selectedItem, setSelectedItem] = useState(null);
   const [composeOpen, setComposeOpen] = useState(false);
+  const [isSendingCompose, setIsSendingCompose] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [toastMessage, setToastMessage] = useState('');
 
@@ -312,25 +327,124 @@ export default function Inbox({ user: _user }) {
     showToast('Filing revisions saved.');
   };
 
-  const handleSendCompose = (e) => {
+  const handleSendCompose = async (e) => {
     e.preventDefault();
     const form = e.target;
-    const newMsg = {
-      id: `msg-${Date.now()}`,
-      subject: form.subject.value,
-      body: form.body.value,
-      sender: currentRole === 'admin' ? 'Provincial Tourism Officer (Admin)' : 'Tourism Staff Member',
-      municipality: form.recipient.value,
-      formType: form.formType.value || 'Direct Notice',
-      category: form.recipient.value === 'All Municipalities' ? 'broadcast' : 'message',
-      status: 'sent',
-      date: new Date().toLocaleString(),
-      unread: false,
-      isLocked: false,
+    const recipientVal = form.recipient?.value || 'All Municipalities';
+    const isBroadcast =
+      recipientVal === 'All Municipalities' ||
+      recipientVal === 'All Establishments' ||
+      !recipientVal;
+
+    const targetMuni = isBroadcast ? 'all' : recipientVal;
+    const recipientId = isBroadcast ? 'broadcast' : recipientVal.toLowerCase();
+    const recipientName = isBroadcast ? recipientVal : `${recipientVal} Tourism Office`;
+    const formTypeVal = form.formType?.value || 'Broadcast';
+    const subjectVal = (form.subject?.value || '').trim();
+    const bodyVal = (form.body?.value || '').trim();
+
+    if (!subjectVal || !bodyVal) {
+      showToast('Please enter both subject and message body.');
+      return;
+    }
+
+    setIsSendingCompose(true);
+
+    const payload = {
+      senderId: 'provincial-ptco',
+      senderName: currentRole === 'admin' ? 'Provincial Tourism Office (PTCO)' : 'Provincial Tourism Staff',
+      senderRole: 'Provincial Admin',
+      recipientId: isBroadcast ? 'broadcast' : recipientVal,
+      recipientName,
+      subject: subjectVal,
+      body: bodyVal,
+      type: 'message',
+      category: isBroadcast ? 'broadcast' : 'message',
+      formType: formTypeVal,
+      status: 'Sent',
+      municipality: targetMuni,
     };
-    updateMessages([newMsg, ...messages]);
-    setComposeOpen(false);
-    showToast('Message dispatched successfully.');
+
+    try {
+      const res = await fetch(`${API_BASE_URL}/inbox`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': 'provincial-ptco',
+          'x-user-role': 'provincial',
+          'x-user-name': 'Provincial Tourism Officer',
+          'x-user-municipality': 'all',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const json = await res.json().catch(() => ({}));
+      const savedItem = json?.data;
+
+      // Broadcast across all open tabs/windows
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        try {
+          const ch = new BroadcastChannel('turismotrack_realtime');
+          ch.postMessage({
+            type: 'inbox:new',
+            data: savedItem || payload,
+          });
+          ch.close();
+        } catch {}
+      }
+
+      const newMsg = {
+        id: savedItem?._id || savedItem?.id || `msg-${Date.now()}`,
+        subject: subjectVal,
+        body: bodyVal,
+        sender: 'Provincial Tourism Office (PTCO)',
+        senderRole: 'Provincial Admin',
+        recipient: recipientName,
+        recipientName,
+        municipality: isBroadcast ? 'All Municipalities' : recipientVal,
+        formType: formTypeVal,
+        category: isBroadcast ? 'broadcast' : 'message',
+        type: 'message',
+        status: 'sent',
+        date: new Date().toLocaleString(),
+        unread: false,
+        isLocked: false,
+      };
+
+      updateMessages([newMsg, ...messages]);
+      setComposeOpen(false);
+      showToast(
+        isBroadcast
+          ? 'Broadcast memo dispatched to all 15 municipalities!'
+          : `Direct notice dispatched to ${recipientVal} Tourism Office!`
+      );
+      fetchLiveInbox();
+    } catch (err) {
+      console.error('Failed to dispatch message:', err);
+      // Fallback optimistic save
+      const fallbackMsg = {
+        id: `msg-${Date.now()}`,
+        subject: subjectVal,
+        body: bodyVal,
+        sender: 'Provincial Tourism Office (PTCO)',
+        senderRole: 'Provincial Admin',
+        recipient: recipientName,
+        recipientName,
+        municipality: isBroadcast ? 'All Municipalities' : recipientVal,
+        formType: formTypeVal,
+        category: isBroadcast ? 'broadcast' : 'message',
+        type: 'message',
+        status: 'sent',
+        date: new Date().toLocaleString(),
+        unread: false,
+        isLocked: false,
+      };
+      updateMessages([fallbackMsg, ...messages]);
+      setComposeOpen(false);
+      showToast('Message saved locally (network retry needed).');
+    } finally {
+      setIsSendingCompose(false);
+    }
   };
 
   const getFormBadgeClass = (type) => {
@@ -783,12 +897,21 @@ export default function Inbox({ user: _user }) {
                     <option value="All Municipalities">
                       All Municipalities (Broadcast Dispatch)
                     </option>
-                    <option value="Bayombong">Bayombong Tourism Office</option>
-                    <option value="Solano">Solano Tourism Office</option>
-                    <option value="Bambang">Bambang Tourism Office</option>
-                    <option value="Diadi">Diadi Tourism Office</option>
+                    <option value="Alfonso Castañeda">Alfonso Castañeda Tourism Office</option>
+                    <option value="Ambaguio">Ambaguio Tourism Office</option>
                     <option value="Aritao">Aritao Tourism Office</option>
+                    <option value="Bagabag">Bagabag Tourism Office</option>
+                    <option value="Bambang">Bambang Tourism Office</option>
+                    <option value="Bayombong">Bayombong Tourism Office</option>
+                    <option value="Diadi">Diadi Tourism Office</option>
+                    <option value="Dupax del Norte">Dupax del Norte Tourism Office</option>
+                    <option value="Dupax del Sur">Dupax del Sur Tourism Office</option>
                     <option value="Kasibu">Kasibu Tourism Office</option>
+                    <option value="Kayapa">Kayapa Tourism Office</option>
+                    <option value="Quezon">Quezon Tourism Office</option>
+                    <option value="Santa Fe">Santa Fe Tourism Office</option>
+                    <option value="Solano">Solano Tourism Office</option>
+                    <option value="Villaverde">Villaverde Tourism Office</option>
                     <option value="All Establishments">
                       All Accommodation Establishments
                     </option>
@@ -875,9 +998,13 @@ export default function Inbox({ user: _user }) {
                 >
                   Cancel
                 </button>
-                <button type="submit" className="tt-btn-primary">
+                <button
+                  type="submit"
+                  className="tt-btn-primary"
+                  disabled={isSendingCompose}
+                >
                   <Send size={14} style={{ marginRight: '6px' }} />
-                  Dispatch Notice
+                  {isSendingCompose ? 'Dispatching...' : 'Dispatch Notice'}
                 </button>
               </div>
             </form>
