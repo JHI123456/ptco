@@ -94,17 +94,29 @@ export default function LGUApprovals({ user, onRefreshCount }) {
         });
       } catch (e) {}
 
-      // 4. Filter out accounts that have already been approved by PTCO
+      // 4. Filter out accounts that have already been approved or rejected by PTCO
       const approvedAccounts = (() => {
         try {
           return JSON.parse(localStorage.getItem("turismotrack_approved_accounts") || "[]");
         } catch { return []; }
       })();
 
+      const rejectedAccounts = (() => {
+        try {
+          return JSON.parse(localStorage.getItem("turismotrack_rejected_accounts") || "[]");
+        } catch { return []; }
+      })();
+
       list = list.filter(item => {
         const email = (item.email || "").toLowerCase().trim();
         const id = String(item._id || item.id || "");
-        return !approvedAccounts.includes(email) && !approvedAccounts.includes(id);
+        const status = String(item.status || "").toLowerCase();
+        const verif = String(item.verificationStatus || "").toLowerCase();
+
+        const isApproved = approvedAccounts.includes(email) || approvedAccounts.includes(id) || status === "active" || verif === "approved";
+        const isRejected = rejectedAccounts.includes(email) || rejectedAccounts.includes(id) || status === "rejected" || verif === "rejected";
+
+        return !isApproved && !isRejected;
       });
 
       setPendingList(list);
@@ -172,6 +184,8 @@ export default function LGUApprovals({ user, onRefreshCount }) {
     try {
       fetch(`${API_BASE_URL}/auth/reject-municipal/${id}`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, municipality: muniName }),
       }).catch(() => {});
 
       try {
@@ -186,6 +200,14 @@ export default function LGUApprovals({ user, onRefreshCount }) {
       if (onRefreshCount) onRefreshCount(updated.length);
 
       showToast(`ℹ️ Tinanggihan ang account para sa ${muniName}.`);
+
+      if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+        try {
+          const ch = new BroadcastChannel("turismotrack_realtime");
+          ch.postMessage({ type: "municipal:rejected", email, id, municipality: muniName });
+          ch.close();
+        } catch {}
+      }
     } catch {
       showToast("❌ Network error habang nagre-reject.");
     } finally {
