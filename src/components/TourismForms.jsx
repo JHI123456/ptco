@@ -3,12 +3,9 @@ import {
   FileSpreadsheet,
   Printer,
   RotateCcw,
-  Zap,
-  CheckCircle2,
-  Trash2
+  CheckCircle2
 } from 'lucide-react';
 import './TourismForms.css';
-import { fetchVisitorAnalytics, API_BASE_URL } from '../services/api';
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -268,52 +265,6 @@ function VAR2Form({ onNotify }) {
     onNotify('Naalis na po ang lahat ng data. 100% blangko ang form.');
   };
 
-  // Live Auto-Sync: ONLY pulls from real submissions in the database
-  const handleAutoFillBayombong = async () => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/inbox`, {
-        headers: { 'x-user-role': 'provincial', 'x-user-municipality': 'all' }
-      });
-      let submissions = [];
-      if (res.ok) {
-        const json = await res.json();
-        const raw = Array.isArray(json?.data) ? json.data : (Array.isArray(json) ? json : []);
-        submissions = raw.filter((s) => {
-          const muni = String(s.municipality || s.municipalityId || s.sender || '').toLowerCase();
-          return muni.includes('bayombong');
-        });
-      }
-
-      if (submissions.length === 0) {
-        setDataStore({});
-        onNotify('Walang nakitang submissions para sa Bayombong sa database. Nananatiling blangko ang form.');
-        return;
-      }
-
-      // Populate from actual live submissions only
-      const next = {};
-      submissions.forEach((s, idx) => {
-        const rowKey = `BAYOMBONG_${idx}`;
-        const formData = s.formData || {};
-        next[rowKey] = {
-          code: formData.code || s.details?.code || '',
-          thisProvMale: String(formData.thisProvMale || ''),
-          thisProvFemale: String(formData.thisProvFemale || ''),
-          otherProvMale: String(formData.otherProvMale || ''),
-          otherProvFemale: String(formData.otherProvFemale || ''),
-          foreignMale: String(formData.foreignMale || ''),
-          foreignFemale: String(formData.foreignFemale || ''),
-        };
-      });
-
-      setDataStore(next);
-      onNotify(`Awtomatikong na-total ang ${submissions.length} submission(s) mula sa Bayombong!`);
-    } catch (e) {
-      setDataStore({});
-      onNotify('Walang nakitang submissions. Nananatiling blangko ang form.');
-    }
-  };
-
   // Grand summary calculation across all municipalities
   const grandTotals = useMemo(() => {
     let tpM = 0, tpF = 0;
@@ -398,19 +349,9 @@ function VAR2Form({ onNotify }) {
         </div>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginBottom: 8 }} className="tf-actions">
-        <button
-          type="button"
-          className="tf-btn tf-btn-primary"
-          onClick={handleAutoFillBayombong}
-          title="Kuhanin at i-total nang kusa ang totoong submissions ng Bayombong"
-        >
-          <Zap size={14} />
-          Auto-Total Bayombong Submissions
-        </button>
-
-        <button type="button" className="tf-btn tf-btn-danger" onClick={handleClearAllData}>
-          <Trash2 size={14} /> Remove All Data / Reset
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }} className="tf-actions">
+        <button type="button" className="tf-btn tf-btn-secondary" onClick={handleClearAllData}>
+          <RotateCcw size={14} /> Clear Form
         </button>
       </div>
 
@@ -769,65 +710,6 @@ function ProvincialLGUForm({ onNotify }) {
     onNotify('Naalis na po ang lahat ng data. 100% blangko ang form.');
   };
 
-  // Auto-Sync ONLY from actual submissions in the database
-  const handleAutoFillAllLGUs = async () => {
-    try {
-      const res = await fetch(`${API_BASE_URL}/inbox`, {
-        headers: { 'x-user-role': 'provincial', 'x-user-municipality': 'all' }
-      });
-      let submissions = [];
-      if (res.ok) {
-        const json = await res.json();
-        submissions = Array.isArray(json?.data) ? json.data : (Array.isArray(json) ? json : []);
-      }
-
-      if (submissions.length === 0) {
-        setDataStore({});
-        onNotify('Walang nakitang submissions sa database. Nananatiling blangko ang form.');
-        return;
-      }
-
-      // Group submissions by municipality and month
-      const nextStore = {};
-      MONTH_NAMES.forEach((_, mIdx) => {
-        nextStore[mIdx] = {};
-      });
-
-      let foundCount = 0;
-      submissions.forEach((s) => {
-        const muni = String(s.municipality || s.municipalityId || '').toUpperCase();
-        const matchingMuni = municipalities.find((m) => muni.includes(m) || m.includes(muni));
-        if (matchingMuni) {
-          const date = s.submittedAt ? new Date(s.submittedAt) : new Date();
-          const mIdx = date.getMonth();
-          const dCount = Number(s.details?.domesticGuests || s.formData?.localVisitors || s.formData?.domestic || 0);
-          const fCount = Number(s.details?.foreignGuests || s.formData?.foreignVisitors || s.formData?.foreign || 0);
-
-          if (dCount > 0 || fCount > 0) {
-            foundCount++;
-            const existingD = Number(nextStore[mIdx][matchingMuni]?.d || 0);
-            const existingF = Number(nextStore[mIdx][matchingMuni]?.f || 0);
-            nextStore[mIdx][matchingMuni] = {
-              d: String(existingD + dCount),
-              f: String(existingF + fCount)
-            };
-          }
-        }
-      });
-
-      if (foundCount === 0) {
-        setDataStore({});
-        onNotify('Walang nakitang datos ng bisita mula sa submissions. Blangko ang form.');
-      } else {
-        setDataStore(nextStore);
-        onNotify('Awtomatikong na-total ang datos mula sa mga submissions!');
-      }
-    } catch (err) {
-      setDataStore({});
-      onNotify('Nananatiling blangko ang form.');
-    }
-  };
-
   return (
     <div className="tf-paper-sheet">
       {/* Header Fields matching Image 8 */}
@@ -857,19 +739,9 @@ function ProvincialLGUForm({ onNotify }) {
         </div>
       </div>
 
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginBottom: 8 }} className="tf-actions">
-        <button
-          type="button"
-          className="tf-btn tf-btn-primary"
-          onClick={handleAutoFillAllLGUs}
-          title="Awtomatikong i-total ang totoong submissions ng Bayombong at LGUs"
-        >
-          <Zap size={14} />
-          Auto-Total Bayombong & LGUs
-        </button>
-
-        <button type="button" className="tf-btn tf-btn-danger" onClick={handleClearAllData}>
-          <Trash2 size={14} /> Remove All Data / Reset
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }} className="tf-actions">
+        <button type="button" className="tf-btn tf-btn-secondary" onClick={handleClearAllData}>
+          <RotateCcw size={14} /> Clear Form
         </button>
       </div>
 
