@@ -58,62 +58,70 @@ const Dashboard = ({ user, onLogout }) => {
   const [pendingMuniCount, setPendingMuniCount] = useState(0);
 
   const loadPendingMuniCount = useCallback(() => {
-    fetch(`${API_BASE_URL}/auth/pending-approvals?role=Provincial&_t=${Date.now()}`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data?.success && Array.isArray(data.pendingMunicipals)) {
-          setPendingMuniCount(data.pendingMunicipals.length);
-        } else {
-          fetch(`${API_BASE_URL}/users?_t=${Date.now()}`)
-            .then((r) => r.json())
-            .then((allU) => {
-              const uList = Array.isArray(allU) ? allU : (allU?.data || []);
-              const pend = uList.filter((u) => {
-                const isMuni = String(u.role || "").toLowerCase().includes("muni");
-                const s = String(u.status || "").toLowerCase();
-                const v = String(u.verificationStatus || "").toLowerCase();
-                return isMuni && (s === "pending" || v === "pending" || u.isRegistered === false);
-              });
-              const approved = (() => {
-                try { return JSON.parse(localStorage.getItem("turismotrack_approved_munis") || "[]"); }
-                catch { return []; }
-              })();
-              const unapprovedPend = pend.filter(p => !approved.some(a => (p.municipality || p.name || "").toLowerCase().includes(a.toLowerCase())));
-              if (unapprovedPend.length > 0) {
-                setPendingMuniCount(unapprovedPend.length);
-              } else {
-                const isAlfonsoApproved = approved.some(m => m.toLowerCase().includes("alfonso"));
-                setPendingMuniCount(isAlfonsoApproved ? 0 : 1);
-              }
-            })
-            .catch(() => {
-              const approved = (() => {
-                try { return JSON.parse(localStorage.getItem("turismotrack_approved_munis") || "[]"); }
-                catch { return []; }
-              })();
-              const isAlfonsoApproved = approved.some(m => m.toLowerCase().includes("alfonso"));
-              setPendingMuniCount(isAlfonsoApproved ? 0 : 1);
-            });
-        }
-      })
-      .catch(() => {
+    const baselineEmails = [
+      "tourism@bayombong.gov.ph",
+      "bayombongtourism@gmail.com",
+      "bayombong@gmail.com",
+    ];
+
+    fetch(`${API_BASE_URL}/users?_t=${Date.now()}`)
+      .then((r) => r.json())
+      .then((allU) => {
+        const uList = Array.isArray(allU) ? allU : (allU?.data || []);
         const approved = (() => {
-          try { return JSON.parse(localStorage.getItem("turismotrack_approved_munis") || "[]"); }
-          catch { return []; }
+          try {
+            const a1 = JSON.parse(localStorage.getItem("turismotrack_approved_munis") || "[]");
+            const a2 = JSON.parse(localStorage.getItem("turismotrack_approved_accounts") || "[]");
+            return [...a1, ...a2].map((x) => String(x).toLowerCase().trim());
+          } catch { return []; }
         })();
-        const isAlfonsoApproved = approved.some(m => m.toLowerCase().includes("alfonso"));
-        setPendingMuniCount(isAlfonsoApproved ? 0 : 1);
-      });
+        const rejected = (() => {
+          try {
+            return JSON.parse(localStorage.getItem("turismotrack_rejected_accounts") || "[]").map((x) => String(x).toLowerCase().trim());
+          } catch { return []; }
+        })();
+
+        const pend = uList.filter((u) => {
+          const role = String(u.role || "").toLowerCase();
+          const estType = String(u.establishmentType || "").toLowerCase();
+          const isMuni = role.includes("municipality") || role.includes("muni") || estType.includes("municipal");
+          const email = String(u.email || "").toLowerCase().trim();
+          const id = String(u._id || u.id || "");
+          const muni = String(u.municipality || "").toLowerCase().trim();
+          const status = String(u.status || "").toLowerCase();
+          const verif = String(u.verificationStatus || "").toLowerCase();
+
+          if (!isMuni) return false;
+          if (baselineEmails.includes(email)) return false;
+          if (approved.includes(email) || approved.includes(id) || (muni && approved.includes(muni)) || verif === "approved") return false;
+          if (rejected.includes(email) || rejected.includes(id) || status === "rejected" || verif === "rejected") return false;
+
+          return true;
+        });
+
+        setPendingMuniCount(pend.length);
+      })
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
     loadPendingMuniCount();
-    const interval = setInterval(loadPendingMuniCount, 15000);
+    const interval = setInterval(loadPendingMuniCount, 4000);
     const handleMuniApproved = () => loadPendingMuniCount();
+    const onFocus = () => loadPendingMuniCount();
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") loadPendingMuniCount();
+    };
+
     window.addEventListener("tt-muni-approved", handleMuniApproved);
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
     return () => {
       clearInterval(interval);
       window.removeEventListener("tt-muni-approved", handleMuniApproved);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [loadPendingMuniCount]);
 

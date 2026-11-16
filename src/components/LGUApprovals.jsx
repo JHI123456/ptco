@@ -5,9 +5,7 @@ import { API_BASE_URL } from "../services/api";
 const DEFAULT_ACTIVE_EMAILS = [
   "tourism@bayombong.gov.ph",
   "bayombongtourism@gmail.com",
-  "bayombong@gmail.com",
-  "ambaguio@gmail.com",
-  "solano@gmail.com"
+  "bayombong@gmail.com"
 ];
 
 export default function LGUApprovals({ user, onRefreshCount }) {
@@ -44,23 +42,25 @@ export default function LGUApprovals({ user, onRefreshCount }) {
           const raw = Array.isArray(allUsers) ? allUsers : (Array.isArray(allUsers?.data) ? allUsers.data : []);
           raw.forEach((u) => {
             const role = String(u.role || "").toLowerCase();
-            const isMuni = role.includes("municipality") || role.includes("muni");
+            const estType = String(u.establishmentType || "").toLowerCase();
+            const isMuni = role.includes("municipality") || role.includes("muni") || estType.includes("municipal");
             const uEmail = String(u.email || "").toLowerCase().trim();
             const status = String(u.status || "").toLowerCase();
             const verif = String(u.verificationStatus || "").toLowerCase();
 
-            // Account is pending if explicitly pending OR newly registered municipal account not in default active list
+            // Account is pending if explicitly pending OR newly registered municipal account not in default baseline list
             const isPending = status === "pending" || verif === "pending" || u.isRegistered === false || !DEFAULT_ACTIVE_EMAILS.includes(uEmail);
 
             if (isMuni && isPending) {
               const alreadyInList = list.some(l => (l.email || "").toLowerCase() === uEmail || String(l._id || l.id) === String(u._id || u.id));
               if (!alreadyInList) {
+                const detectedMuni = u.municipality || (u.name && u.name.replace(/Municipal|Tourism|Office/gi, '').trim()) || 'Municipal';
                 list.push({
                   _id: u._id || u.id || `muni_${Date.now()}`,
                   id: u.id || u._id,
-                  name: u.name || u.officeName || `${u.municipality || 'Municipal'} Tourism Office`,
-                  officeName: u.officeName || u.name || `${u.municipality || 'Municipal'} Tourism Office`,
-                  municipality: u.municipality || 'Alfonso Castañeda',
+                  name: u.name || u.officeName || `${detectedMuni} Municipal Tourism Office`,
+                  officeName: u.officeName || u.name || `${detectedMuni} Municipal Tourism Office`,
+                  municipality: detectedMuni,
                   email: u.email,
                   role: u.role || 'Municipality Admin',
                   status: 'pending',
@@ -101,6 +101,12 @@ export default function LGUApprovals({ user, onRefreshCount }) {
         } catch { return []; }
       })();
 
+      const approvedMunis = (() => {
+        try {
+          return JSON.parse(localStorage.getItem("turismotrack_approved_munis") || "[]");
+        } catch { return []; }
+      })();
+
       const rejectedAccounts = (() => {
         try {
           return JSON.parse(localStorage.getItem("turismotrack_rejected_accounts") || "[]");
@@ -110,11 +116,21 @@ export default function LGUApprovals({ user, onRefreshCount }) {
       list = list.filter(item => {
         const email = (item.email || "").toLowerCase().trim();
         const id = String(item._id || item.id || "");
+        const muni = String(item.municipality || "").toLowerCase().trim();
         const status = String(item.status || "").toLowerCase();
         const verif = String(item.verificationStatus || "").toLowerCase();
 
-        const isApproved = approvedAccounts.includes(email) || approvedAccounts.includes(id) || status === "active" || verif === "approved";
-        const isRejected = rejectedAccounts.includes(email) || rejectedAccounts.includes(id) || status === "rejected" || verif === "rejected";
+        // Baseline active accounts are never pending
+        if (DEFAULT_ACTIVE_EMAILS.includes(email)) return false;
+
+        const isApproved = approvedAccounts.includes(email) ||
+                           approvedAccounts.includes(id) ||
+                           (muni && approvedMunis.some(m => String(m).toLowerCase().trim() === muni)) ||
+                           verif === "approved";
+        const isRejected = rejectedAccounts.includes(email) ||
+                           rejectedAccounts.includes(id) ||
+                           status === "rejected" ||
+                           verif === "rejected";
 
         return !isApproved && !isRejected;
       });
@@ -135,15 +151,27 @@ export default function LGUApprovals({ user, onRefreshCount }) {
       try {
         ch = new BroadcastChannel("turismotrack_realtime");
         ch.onmessage = (event) => {
-          if (event.data?.type?.includes("municipal") || event.data?.type?.includes("user")) {
+          if (event.data?.type?.includes("municipal") || event.data?.type?.includes("user") || event.data?.type?.includes("lgu")) {
             fetchPending(true);
           }
         };
       } catch {}
     }
-    const interval = setInterval(() => fetchPending(true), 20000);
+
+    // Refresh immediately whenever admin switches tabs or window gains focus
+    const onFocus = () => fetchPending(true);
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") fetchPending(true);
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    // Fast polling every 4 seconds to catch new registrations in real time
+    const interval = setInterval(() => fetchPending(true), 4000);
     return () => {
       if (ch) ch.close();
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       clearInterval(interval);
     };
   }, [fetchPending]);
@@ -163,6 +191,10 @@ export default function LGUApprovals({ user, onRefreshCount }) {
         if (email && !approved.includes(email.toLowerCase().trim())) approved.push(email.toLowerCase().trim());
         if (id && !approved.includes(String(id))) approved.push(String(id));
         localStorage.setItem("turismotrack_approved_accounts", JSON.stringify(approved));
+
+        const approvedMunis = JSON.parse(localStorage.getItem("turismotrack_approved_munis") || "[]");
+        if (muniName && !approvedMunis.includes(muniName)) approvedMunis.push(muniName);
+        localStorage.setItem("turismotrack_approved_munis", JSON.stringify(approvedMunis));
       } catch (e) {}
 
       const updated = pendingList.filter(p => p._id !== id && p.id !== id && (email ? (p.email || "").toLowerCase() !== email.toLowerCase() : true));
