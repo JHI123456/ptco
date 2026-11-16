@@ -175,7 +175,6 @@ const Dashboard = ({ user, onLogout }) => {
               municipality: "Alfonso Castañeda",
               role: "Municipality Admin",
               email: "alfonso@gmail.com",
-              phone: "—",
               status: "Active",
               isRegistered: true,
             });
@@ -702,7 +701,6 @@ const Dashboard = ({ user, onLogout }) => {
                       <th>Municipality</th>
                       <th>Designation / Role</th>
                       <th>Official Email</th>
-                      <th>Contact Phone</th>
                       <th>Status</th>
                     </tr>
                   </thead>
@@ -730,7 +728,6 @@ const Dashboard = ({ user, onLogout }) => {
                               {officer.email}
                             </a>
                           </td>
-                          <td>{officer.phone && officer.phone !== '+63 (078) 321-2311' ? officer.phone : '—'}</td>
                           <td>
                             <span className="badge-status-active">Active</span>
                           </td>
@@ -738,7 +735,7 @@ const Dashboard = ({ user, onLogout }) => {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={6} style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>
+                        <td colSpan={5} style={{ textAlign: "center", padding: "40px", color: "#64748b" }}>
                           {officers.length === 0
                             ? "No municipal tourism personnel registered yet. Directory will populate automatically when municipal tourism officers register."
                             : `No officers found matching "${userSearch}".`}
