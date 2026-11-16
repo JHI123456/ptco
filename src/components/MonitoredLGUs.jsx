@@ -165,7 +165,7 @@
       const handleApprovedEvent = () => loadLGUs();
       window.addEventListener("tt-muni-approved", handleApprovedEvent);
 
-      const interval = setInterval(loadLGUs, 4000);
+      const interval = setInterval(loadLGUs, 20000);
       return () => {
         isMounted = false;
         if (channel) channel.close();

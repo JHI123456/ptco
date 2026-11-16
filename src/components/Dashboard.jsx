@@ -258,7 +258,7 @@ const Dashboard = ({ user, onLogout }) => {
       } catch { }
     }
 
-    const interval = setInterval(loadLiveRecords, 4000);
+    const interval = setInterval(loadLiveRecords, 20000);
     return () => {
       isMounted = false;
       if (channel) channel.close();
