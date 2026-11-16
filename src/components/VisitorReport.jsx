@@ -5,7 +5,8 @@ import {
   RotateCcw,
   X,
   Check,
-  Info
+  Info,
+  FileText
 } from "lucide-react";
 import "./VisitorReport.css";
 import { fetchLGUs, fetchVisitorAnalytics } from "../services/api";
@@ -31,7 +32,7 @@ const createEmptyDataset = () => {
   };
 };
 
-const VisitorReport = () => {
+const VisitorReport = ({ onOpenForms }) => {
   // Calendar-accurate date references
   const now = useMemo(() => new Date(), []);
   const currentYear = now.getFullYear();
@@ -506,6 +507,30 @@ const VisitorReport = () => {
 
           {/* Quick Chart Management Actions */}
           <div className="chart-top-actions">
+            {onOpenForms && (
+              <button
+                type="button"
+                className="action-btn"
+                style={{
+                  background: "#f0fdf4",
+                  border: "1px solid #bbf7d0",
+                  color: "#166534",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "7px 12px",
+                  borderRadius: "6px",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: "pointer"
+                }}
+                onClick={onOpenForms}
+                title="View DOT blank official forms (VAR 1, VAR 2, VAR 3, Visitor Logsheet)"
+              >
+                <FileText size={14} color="#15803d" />
+                <span>DOT Official Forms</span>
+              </button>
+            )}
             <button
               type="button"
               className="action-btn btn-log"

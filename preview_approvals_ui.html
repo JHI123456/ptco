@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TurismoTrack — Approvals UI Preview</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 p-4 md:p-6 antialiased">
+  <div class="max-w-7xl mx-auto space-y-5">
+
+    <!-- Top View Switcher Toolbar -->
+    <div class="flex items-center justify-between pb-3 border-b border-slate-200">
+      <div class="flex items-center gap-2">
+        <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Proposed UI Layout Preview</span>
+      </div>
+      <div class="inline-flex p-1 bg-slate-200/80 rounded-lg text-xs font-semibold">
+        <button id="btn-grid" onclick="switchView('grid')" class="px-3 py-1.5 rounded-md bg-white text-emerald-800 shadow-sm transition">
+          ✨ Rekomendasyon 1: Modern Grid
+        </button>
+        <button id="btn-table" onclick="switchView('table')" class="px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition">
+          📋 Rekomendasyon 2: Table Registry
+        </button>
+      </div>
+    </div>
+
+    <!-- Page Title Header (Clean Left-aligned) -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="text-xl">🏛️</span>
+          <h1 class="text-2xl font-extrabold text-slate-900 tracking-tight">ACCOMMODATION ACCOUNT APPROVALS</h1>
+          <span class="bg-amber-100 text-amber-800 text-xs font-bold px-2.5 py-0.5 rounded-full border border-amber-200">
+            Bayombong LGU
+          </span>
+        </div>
+        <p class="text-sm text-slate-500 mt-1">
+          Suriin at i-activate ang mga bagong nagrehistrong hotels, resorts, at farm tourism bago sila makapag-check in ng mga turista.
+        </p>
+      </div>
+      <div class="flex items-center gap-2 self-start md:self-auto">
+        <button class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-300 rounded-lg shadow-sm hover:bg-slate-50 active:scale-95 transition">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+          Refresh List
+        </button>
+      </div>
+    </div>
+
+    <!-- 3 Top Metric KPI Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <!-- Card 1: For Review -->
+      <div class="bg-white p-4 rounded-xl border border-amber-200/80 shadow-sm relative overflow-hidden">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold tracking-wider text-amber-700 uppercase">Nakabinbing Pag-apruba</span>
+          <div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-sm">⏳</div>
+        </div>
+        <div class="text-2xl font-black text-slate-900 mt-2">1</div>
+        <div class="text-xs font-semibold text-amber-600 mt-1">Requires inspection & account activation</div>
+        <div class="absolute bottom-0 left-0 right-0 h-1 bg-amber-500"></div>
+      </div>
+
+      <!-- Card 2: Active Accredited -->
+      <div class="bg-white p-4 rounded-xl border border-emerald-200/80 shadow-sm relative overflow-hidden">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold tracking-wider text-emerald-700 uppercase">Aktibong Establisimyento</span>
+          <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold text-sm">🏨</div>
+        </div>
+        <div class="text-2xl font-black text-slate-900 mt-2">2</div>
+        <div class="text-xs font-semibold text-emerald-600 mt-1">Zen Hotel Bayombong & WILWIN HOTEL</div>
+        <div class="absolute bottom-0 left-0 right-0 h-1 bg-emerald-500"></div>
+      </div>
+
+      <!-- Card 3: Verification Standard -->
+      <div class="bg-white p-4 rounded-xl border border-blue-200/80 shadow-sm relative overflow-hidden">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold tracking-wider text-blue-700 uppercase">Turnaround Time</span>
+          <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-sm">⚡</div>
+        </div>
+        <div class="text-2xl font-black text-slate-900 mt-2">&lt; 24 Oras</div>
+        <div class="text-xs font-semibold text-blue-600 mt-1">Same-day municipal activation standard</div>
+        <div class="absolute bottom-0 left-0 right-0 h-1 bg-blue-500"></div>
+      </div>
+    </div>
+
+    <!-- Search & Filter Controls -->
+    <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+      <div class="relative flex-1 max-w-md">
+        <svg class="w-4 h-4 text-slate-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        <input type="text" placeholder="Maghanap ayon sa pangalan, kategorya, o email..." class="w-full pl-9 pr-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition" />
+      </div>
+      <div class="flex items-center gap-1.5 overflow-x-auto text-xs font-bold">
+        <span class="text-slate-400 font-normal mr-1 text-[11px]">Uri:</span>
+        <button class="px-2.5 py-1 bg-emerald-700 text-white rounded-md">Lahat (1)</button>
+        <button class="px-2.5 py-1 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-md">Farm Tourism (1)</button>
+        <button class="px-2.5 py-1 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-md">Hotels (0)</button>
+        <button class="px-2.5 py-1 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-md">Resorts (0)</button>
+      </div>
+    </div>
+
+    <!-- VIEW 1: Modern Full-Width Grid (Left-aligned) -->
+    <div id="view-grid" class="space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500">
+          Mga Establisimyentong Naghihintay ng Aksyon (1)
+        </h2>
+        <span class="text-xs text-slate-400">Pindutin ang "Approve & Activate" para magamit ang portal</span>
+      </div>
+
+      <!-- Cards Grid: Left-aligned, natural wrapping -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <!-- SKY - ESCAPE CARD -->
+        <div class="bg-white rounded-2xl border-2 border-emerald-500/30 p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between space-y-4 relative">
+          <!-- Top Tag -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="bg-emerald-100 text-emerald-800 text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-md">
+                CENTRAL DISTRICT • BAYOMBONG
+              </span>
+              <span class="inline-flex items-center gap-1 bg-amber-50 text-amber-700 border border-amber-200 text-[11px] font-bold px-2 py-0.5 rounded-full">
+                <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                For Review
+              </span>
+            </div>
+
+            <!-- Title & Type -->
+            <h3 class="text-lg font-black text-slate-900 tracking-tight">SKY - ESCAPE</h3>
+            <p class="text-xs font-bold text-emerald-700">Accommodation • Farm Tourism Camps</p>
+
+            <!-- Details List -->
+            <div class="mt-4 space-y-2 text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100">
+              <div class="flex items-center gap-2">
+                <span class="text-slate-400">📍</span>
+                <span class="font-medium">Brgy. Bonfal East, Bayombong, Nueva Vizcaya</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-slate-400">✉️</span>
+                <span class="font-mono text-slate-700">skyescape@gmail.com</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-slate-400">📞</span>
+                <span>0917 123 4567</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-slate-400">🆔</span>
+                <span class="font-mono text-slate-500">REG-2026-7613</span>
+              </div>
+            </div>
+
+            <!-- Pre-verification checklist -->
+            <div class="mt-3 text-[11px] space-y-1 text-slate-500">
+              <div class="flex items-center gap-1.5 text-emerald-700 font-semibold">
+                <span>✓</span> Business Registration format valid
+              </div>
+              <div class="flex items-center gap-1.5 text-emerald-700 font-semibold">
+                <span>✓</span> Designated within Bayombong Tourism jurisdiction
+              </div>
+            </div>
+          </div>
+
+          <!-- Bottom Action Buttons -->
+          <div class="pt-3 border-t border-slate-100 flex items-center gap-2">
+            <button onclick="alert('Demo: Naaprubahan na ang SKY - ESCAPE!')" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-2.5 px-3 rounded-lg shadow-sm flex items-center justify-center gap-1.5 transition active:scale-95">
+              <span>✓</span> Approve &amp; Activate
+            </button>
+            <button onclick="alert('Demo: Tinanggihan ang rehistro.')" class="bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 font-bold text-xs py-2.5 px-3 rounded-lg transition">
+              ✕ Decline
+            </button>
+          </div>
+        </div>
+
+        <!-- Placeholder Dotted Card for Future Registrations -->
+        <div class="rounded-2xl border-2 border-dashed border-slate-200 p-6 flex flex-col items-center justify-center text-center text-slate-400 space-y-2 bg-slate-50/50 min-h-[280px]">
+          <div class="w-10 h-10 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center text-lg">➕</div>
+          <div class="text-xs font-bold text-slate-500">Waiting for New Registrations</div>
+          <p class="text-[11px] text-slate-400 max-w-[200px]">
+            Ang mga susunod na hotels at resorts na magrehistro sa Bayombong ay lalabas dito.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- VIEW 2: Table Registry View -->
+    <div id="view-table" class="space-y-4 hidden">
+      <div class="flex items-center justify-between">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500">
+          Official Accreditation Registry Table
+        </h2>
+        <span class="text-xs text-slate-400">Formal government registry format</span>
+      </div>
+
+      <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-[10px] font-extrabold tracking-wider">
+            <tr>
+              <th class="py-3 px-4">Establisimyento</th>
+              <th class="py-3 px-4">Kategorya &amp; Uri</th>
+              <th class="py-3 px-4">Lokasyon</th>
+              <th class="py-3 px-4">Contact &amp; Email</th>
+              <th class="py-3 px-4">Status</th>
+              <th class="py-3 px-4 text-right">Aksyon</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 font-medium">
+            <tr class="hover:bg-slate-50/80 transition">
+              <td class="py-3 px-4">
+                <div class="font-bold text-slate-900 text-sm">SKY - ESCAPE</div>
+                <div class="text-[11px] font-mono text-slate-400">REG-2026-7613</div>
+              </td>
+              <td class="py-3 px-4">
+                <span class="inline-block px-2 py-0.5 bg-emerald-50 text-emerald-800 rounded font-semibold text-[11px]">
+                  Farm Tourism Camps
+                </span>
+                <div class="text-[11px] text-slate-400 mt-0.5">Accommodation</div>
+              </td>
+              <td class="py-3 px-4 text-slate-600">
+                <div>Brgy. Bonfal East</div>
+                <div class="text-[11px] text-slate-400">Bayombong, Nueva Vizcaya</div>
+              </td>
+              <td class="py-3 px-4">
+                <div class="font-mono text-slate-700">skyescape@gmail.com</div>
+                <div class="text-[11px] text-slate-400">0917 123 4567</div>
+              </td>
+              <td class="py-3 px-4">
+                <span class="inline-flex items-center gap-1 bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                  ⏳ FOR REVIEW
+                </span>
+              </td>
+              <td class="py-3 px-4 text-right space-x-1.5">
+                <button onclick="alert('Demo: Naaprubahan na!')" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-1.5 px-3 rounded-lg shadow-sm transition">
+                  ✓ Approve &amp; Activate
+                </button>
+                <button onclick="alert('Demo: Tinanggihan!')" class="bg-white hover:bg-rose-50 text-rose-600 border border-rose-200 font-bold text-xs py-1.5 px-2.5 rounded-lg transition">
+                  ✕ Decline
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    function switchView(mode) {
+      const gridView = document.getElementById('view-grid');
+      const tableView = document.getElementById('view-table');
+      const btnGrid = document.getElementById('btn-grid');
+      const btnTable = document.getElementById('btn-table');
+
+      if (mode === 'grid') {
+        gridView.classList.remove('hidden');
+        tableView.classList.add('hidden');
+        btnGrid.className = 'px-3 py-1.5 rounded-md bg-white text-emerald-800 shadow-sm transition';
+        btnTable.className = 'px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition';
+      } else {
+        gridView.classList.add('hidden');
+        tableView.classList.remove('hidden');
+        btnTable.className = 'px-3 py-1.5 rounded-md bg-white text-emerald-800 shadow-sm transition';
+        btnGrid.className = 'px-3 py-1.5 rounded-md text-slate-600 hover:text-slate-900 transition';
+      }
+    }
+  </script>
+</body>
+</html>

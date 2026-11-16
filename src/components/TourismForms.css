@@ -1,0 +1,579 @@
+/* ==========================================================================
+   Official Department of Tourism (DOT) Forms & Visitor Attraction Record (VAR)
+   Provincial Tourism Office - Authentic Standard Filing Sheets
+   ========================================================================== */
+
+.tf-container {
+  width: 100%;
+  padding: 0 0 40px 0;
+  color: #0f172a;
+  font-family: 'Outfit', 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Header & Switcher Toolbar */
+.tf-top-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: #ffffff;
+  padding: 20px 24px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  margin-bottom: 24px;
+}
+
+.tf-top-info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.tf-title-area h2 {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tf-title-area p {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0;
+}
+
+.tf-badge-official {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.tf-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.tf-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.tf-btn-primary {
+  background: #15803d;
+  color: #ffffff;
+  border-color: #166534;
+}
+
+.tf-btn-primary:hover {
+  background: #166534;
+}
+
+.tf-btn-secondary {
+  background: #f8fafc;
+  color: #334155;
+  border-color: #cbd5e1;
+}
+
+.tf-btn-secondary:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.tf-btn-danger {
+  background: #fff1f2;
+  color: #be123c;
+  border-color: #fecdd3;
+}
+
+.tf-btn-danger:hover {
+  background: #ffe4e6;
+}
+
+/* Form Selection Tabs */
+.tf-tabs-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 14px;
+}
+
+.tf-tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.tf-tab-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+.tf-tab-btn.active {
+  background: #0f172a;
+  color: #ffffff;
+  border-color: #0f172a;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.2);
+}
+
+.tf-tab-badge {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.tf-tab-btn.active .tf-tab-badge {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+/* ==========================================================================
+   Authentic DOT Official Paper Sheet Wrapper
+   ========================================================================== */
+.tf-paper-sheet {
+  background: #ffffff;
+  border: 1.5px solid #000000;
+  border-radius: 4px;
+  padding: 28px 30px 32px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  position: relative;
+  overflow-x: auto;
+  min-height: 700px;
+}
+
+/* Blue Guide Dashed Lines matching the uploaded screenshots */
+.tf-paper-sheet::before {
+  content: "";
+  display: block;
+}
+
+/* Sheet Top Header */
+.tf-sheet-header {
+  position: relative;
+  margin-bottom: 14px;
+}
+
+.tf-code-corner {
+  position: absolute;
+  top: 0;
+  right: 0;
+  font-size: 13px;
+  font-weight: 800;
+  color: #000000;
+  letter-spacing: 0.05em;
+  padding: 2px 6px;
+}
+
+.tf-code-corner.tf-code-left {
+  right: auto;
+  left: 0;
+}
+
+.tf-sheet-title {
+  font-size: 16px;
+  font-weight: 800;
+  color: #000000;
+  margin: 0;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.tf-sheet-subtitle {
+  font-size: 11.5px;
+  font-style: italic;
+  color: #333333;
+  margin: 2px 0 10px 0;
+}
+
+/* Underline Fields Row */
+.tf-meta-form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.tf-meta-field {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #000000;
+}
+
+.tf-meta-label {
+  white-space: nowrap;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.tf-meta-input-line {
+  flex: 1;
+  max-width: 380px;
+  border: none;
+  border-bottom: 1.5px solid #000000;
+  background: transparent;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #000000;
+  padding: 1px 4px;
+  outline: none;
+  border-radius: 0;
+}
+
+.tf-meta-input-line:focus {
+  border-bottom-color: #15803d;
+  background-color: #f0fdf4;
+}
+
+.tf-meta-box {
+  width: 50px;
+  height: 22px;
+  border: 1.5px solid #000000;
+  background: transparent;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  outline: none;
+}
+
+.tf-meta-hint {
+  font-size: 11px;
+  font-weight: normal;
+  color: #475569;
+  margin-left: 6px;
+}
+
+/* ==========================================================================
+   DOT Standard Table Formatting (Yellow Headers, Crisp 1px Black Grid)
+   ========================================================================== */
+.tf-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1.5px solid #000000;
+  margin-top: 12px;
+  background: #ffffff;
+}
+
+.tf-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+  text-align: center;
+  color: #000000;
+}
+
+/* Yellow Header background matching uploaded government screenshots */
+.tf-table thead tr th {
+  border: 1px solid #000000;
+  padding: 5px 3px;
+  font-weight: 700;
+  color: #000000;
+  line-height: 1.2;
+}
+
+.tf-th-yellow {
+  background-color: #ffff00 !important; /* Authentic DOT Yellow */
+  color: #000000;
+}
+
+.tf-th-white {
+  background-color: #ffffff !important;
+  color: #000000;
+}
+
+.tf-th-sub {
+  background-color: #ffff00;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+/* Table Body */
+.tf-table tbody tr {
+  border-bottom: 1px solid #000000;
+}
+
+.tf-table tbody tr:nth-child(even) {
+  background-color: #fafafa;
+}
+
+.tf-table tbody tr:hover {
+  background-color: #fefce8;
+}
+
+.tf-table tbody td {
+  border: 1px solid #000000;
+  padding: 3px 2px;
+  font-size: 11px;
+  color: #000000;
+  white-space: nowrap;
+}
+
+/* Cell inputs for editable forms */
+.tf-cell-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  text-align: center;
+  font-size: 11px;
+  color: #000000;
+  padding: 2px 1px;
+  outline: none;
+  font-family: inherit;
+}
+
+.tf-cell-input:focus {
+  background: #fef08a;
+  font-weight: 700;
+}
+
+.tf-cell-input-text {
+  text-align: left;
+  padding-left: 6px;
+}
+
+/* Readonly / computed total cells */
+.tf-cell-total {
+  font-weight: 700;
+  background-color: rgba(255, 255, 0, 0.12);
+  min-width: 32px;
+}
+
+.tf-cell-grand {
+  font-weight: 800;
+  background-color: rgba(255, 255, 0, 0.25);
+  min-width: 36px;
+}
+
+/* Green Total/Summary Row at bottom matching uploaded screenshots */
+.tf-row-green td,
+.tf-total-green {
+  background-color: #90ee90 !important; /* Authentic Highlighter Green */
+  color: #000000 !important;
+  font-weight: 800 !important;
+  border: 1px solid #000000 !important;
+  padding: 6px 3px !important;
+  font-size: 11.5px !important;
+}
+
+/* Footnotes & Legend */
+.tf-sheet-footer {
+  margin-top: 14px;
+  font-size: 10.5px;
+  color: #1e293b;
+  line-height: 1.45;
+}
+
+.tf-footer-note {
+  margin: 3px 0;
+}
+
+.tf-footer-notice {
+  font-weight: 700;
+  margin-top: 6px;
+  color: #000000;
+}
+
+/* Signatures section */
+.tf-signatures-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-top: 28px;
+  padding: 0 40px;
+  gap: 30px;
+}
+
+.tf-sig-block {
+  display: flex;
+  flex-direction: column;
+  min-width: 240px;
+}
+
+.tf-sig-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #334155;
+  margin-bottom: 24px;
+}
+
+.tf-sig-name-input {
+  border: none;
+  border-bottom: 1.5px solid #000000;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #000000;
+  padding: 2px 4px;
+  outline: none;
+  border-radius: 0;
+  text-align: center;
+}
+
+.tf-sig-name-input:focus {
+  background: #f0fdf4;
+  border-bottom-color: #15803d;
+}
+
+.tf-sig-title-input {
+  border: none;
+  background: transparent;
+  font-size: 11px;
+  color: #334155;
+  padding: 2px 4px;
+  outline: none;
+  text-align: center;
+}
+
+/* Watermark / Page indicators like "Page 1", "Page 2" in screenshots */
+.tf-page-label {
+  display: flex;
+  justify-content: flex-end;
+  font-size: 10px;
+  font-weight: 600;
+  color: #64748b;
+  margin-top: 10px;
+}
+
+.tf-page-watermark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 64px;
+  font-weight: 900;
+  color: rgba(148, 163, 184, 0.12);
+  pointer-events: none;
+  user-select: none;
+  letter-spacing: 0.05em;
+}
+
+/* Dashed division line matching screenshot page cuts */
+.tf-dashed-divider {
+  border-top: 2px dashed #2563eb;
+  margin: 20px 0;
+  position: relative;
+}
+
+.tf-dashed-divider::after {
+  content: "<Continue to next page>";
+  position: absolute;
+  top: -9px;
+  right: 20px;
+  background: #ffffff;
+  padding: 0 8px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #1e40af;
+}
+
+/* Group row header for Municipal Attractions in VAR 2 / VAR 2P */
+.tf-group-header-cell {
+  background-color: #f1f5f9;
+  font-weight: 800;
+  text-align: left !important;
+  padding: 5px 8px !important;
+  color: #0f172a;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.tf-subtotal-cell {
+  background-color: #f8fafc;
+  font-weight: 700;
+  color: #334155;
+}
+
+/* ==========================================================================
+   Print Styles for Official Government Documentation
+   ========================================================================== */
+@media print {
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .sidebar,
+  .topbar,
+  .dashboard-top-ribbon,
+  .tf-top-bar,
+  .tf-tabs-wrapper,
+  .tf-actions,
+  .pwa-prompt,
+  .tf-btn {
+    display: none !important;
+  }
+
+  .content,
+  .dashboard,
+  .tf-container {
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+  }
+
+  .tf-paper-sheet {
+    border: 1px solid #000000 !important;
+    box-shadow: none !important;
+    padding: 10mm 10mm !important;
+    margin: 0 !important;
+    width: 100% !important;
+    page-break-inside: avoid;
+  }
+
+  .tf-table-wrap {
+    overflow: visible !important;
+  }
+
+  .tf-table thead th.tf-th-yellow {
+    background-color: #ffff00 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .tf-row-green td,
+  .tf-total-green {
+    background-color: #90ee90 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .tf-cell-input {
+    border: none !important;
+  }
+}

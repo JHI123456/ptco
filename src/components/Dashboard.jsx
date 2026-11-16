@@ -15,7 +15,8 @@ import {
   CheckCircle2,
   Inbox as InboxIcon,
   ShieldCheck,
-  DatabaseBackup
+  DatabaseBackup,
+  FileSpreadsheet
 } from "lucide-react";
 import "./Dashboard.css";
 import MunicipalRankings from "./MunicipalRankings";
@@ -27,6 +28,7 @@ import AuditLog from "./AuditLog";
 import BackupRecovery from "./BackupRecovery";
 import LGUApprovals from "./LGUApprovals";
 import CulturalRibbon from "./CulturalRibbon";
+import TourismForms from "./TourismForms";
 import { fetchUsers, fetchLGUs, fetchEstablishments, fetchVisitorAnalytics, API_BASE_URL } from "../services/api";
 
 const MONTH_NAMES = [
@@ -39,6 +41,7 @@ const Dashboard = ({ user, onLogout }) => {
     if (typeof window !== "undefined") {
       const hash = window.location.hash.replace("#", "").toLowerCase();
       if (hash.includes("establishment")) return "Establishments";
+      if (hash.includes("form")) return "Forms";
       if (hash.includes("report")) return "Visitor Reports";
       if (hash.includes("municipal")) return "Municipalities";
       if (hash.includes("user")) return "Users";
@@ -283,6 +286,7 @@ const Dashboard = ({ user, onLogout }) => {
   const menuItems = [
     { name: "Dashboard", icon: LayoutDashboard },
     { name: "Inbox", icon: InboxIcon },
+    { name: "Forms", icon: FileSpreadsheet },
     { name: "Visitor Reports", icon: FileText },
     { name: "Municipalities", icon: MapPin },
     { name: "Users", icon: Users },
@@ -592,27 +596,31 @@ const Dashboard = ({ user, onLogout }) => {
               <h3>
                 {activeTab === "Inbox"
                   ? "MUNICIPAL TOURISM INBOX & AUDIT DISPATCH"
-                  : activeTab === "Visitor Reports" || activeTab === "Visitor Report"
-                    ? "VISITOR REPORT"
-                    : activeTab === "Establishments"
-                      ? "MONITORED ESTABLISHMENTS"
-                      : activeTab === "Municipalities"
-                        ? "MONITORED LGUS"
-                        : activeTab === "Users"
-                          ? "USERS"
-                          : activeTab === "LGU Approvals"
-                            ? "LGU ACCOUNT APPROVALS & VERIFICATIONS"
-                          : activeTab === "Audit Logs"
-                            ? "AUDIT & ACTIVITY TRAIL"
-                            : activeTab === "Backup & Recovery"
-                              ? "SYSTEM BACKUP & DISASTER RECOVERY"
-                            : "DASHBOARD"}
+                  : activeTab === "Forms" || activeTab === "Official Forms" || activeTab === "Tourism Forms"
+                    ? "OFFICIAL TOURISM FORMS (DOT / VAR)"
+                    : activeTab === "Visitor Reports" || activeTab === "Visitor Report"
+                      ? "VISITOR REPORT"
+                      : activeTab === "Establishments"
+                        ? "MONITORED ESTABLISHMENTS"
+                        : activeTab === "Municipalities"
+                          ? "MONITORED LGUS"
+                          : activeTab === "Users"
+                            ? "USERS"
+                            : activeTab === "LGU Approvals"
+                              ? "LGU ACCOUNT APPROVALS & VERIFICATIONS"
+                            : activeTab === "Audit Logs"
+                              ? "AUDIT & ACTIVITY TRAIL"
+                              : activeTab === "Backup & Recovery"
+                                ? "SYSTEM BACKUP & DISASTER RECOVERY"
+                              : "DASHBOARD"}
               </h3>
               <p>
                 {activeTab === "Inbox"
                   ? "View messages, track submission status, and revise returned filings"
-                  : activeTab === "Visitor Reports" || activeTab === "Visitor Report"
-                    ? "Overview of tourism in Nueva Vizcaya"
+                  : activeTab === "Forms" || activeTab === "Official Forms" || activeTab === "Tourism Forms"
+                    ? "Standard Department of Tourism (DOT) Visitor Attraction Recording (VAR) sheets, daily visitor logs, and municipal filings"
+                    : activeTab === "Visitor Reports" || activeTab === "Visitor Report"
+                      ? "Overview of tourism in Nueva Vizcaya"
                     : activeTab === "Establishments"
                       ? "Registered accommodation, dining, and ecotourism facilities in Nueva Vizcaya"
                       : activeTab === "Municipalities"
@@ -659,8 +667,10 @@ const Dashboard = ({ user, onLogout }) => {
         <section className="content">
           {activeTab === "Inbox" ? (
             <Inbox user={user} />
+          ) : activeTab === "Forms" || activeTab === "Official Forms" || activeTab === "Tourism Forms" ? (
+            <TourismForms user={user} />
           ) : activeTab === "Visitor Reports" || activeTab === "Visitor Report" ? (
-            <VisitorReport />
+            <VisitorReport onOpenForms={() => setActiveTab("Forms")} />
           ) : activeTab === "Establishments" ? (
             <MonitoredEstablishments />
           ) : activeTab === "Municipalities" ? (
