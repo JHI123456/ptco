@@ -520,6 +520,250 @@
 }
 
 /* ==========================================================================
+   Monthly & Yearly Visitors per Attraction Template Styles
+   ========================================================================== */
+.tf-instruction-banner {
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-left: 4px solid #2563eb;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #1e40af;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.tf-legend-tags {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11.5px;
+}
+
+.tf-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tf-swatch-blue {
+  width: 14px;
+  height: 14px;
+  background-color: #dbeafe;
+  border: 1px solid #60a5fa;
+  border-radius: 2px;
+}
+
+.tf-swatch-gray {
+  width: 14px;
+  height: 14px;
+  background-color: #f1f5f9;
+  border: 1px solid #94a3b8;
+  border-radius: 2px;
+}
+
+/* Month Quick Jump Bar */
+.tf-month-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 8px 0;
+  margin-bottom: 10px;
+}
+
+.tf-month-bar-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #475569;
+  white-space: nowrap;
+  margin-right: 4px;
+}
+
+.tf-month-chip {
+  padding: 4px 9px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background-color: #ffffff;
+  color: #334155;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.tf-month-chip:hover {
+  background-color: #f8fafc;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.tf-month-chip.active {
+  background-color: #1e40af;
+  color: #ffffff;
+  border-color: #1e40af;
+}
+
+.tf-month-chip-yearly {
+  background-color: #fef08a;
+  border-color: #eab308;
+  color: #713f12;
+}
+
+.tf-month-chip-yearly:hover {
+  background-color: #fde047;
+  border-color: #ca8a04;
+}
+
+.tf-month-chip-yearly.active {
+  background-color: #ca8a04;
+  color: #ffffff;
+  border-color: #a16207;
+}
+
+/* Sticky first columns */
+.tf-sticky-attraction {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 10 !important;
+  background-color: #ffffff !important;
+  min-width: 200px !important;
+  max-width: 220px !important;
+  text-align: left !important;
+  padding-left: 8px !important;
+  white-space: normal !important;
+  word-break: break-word !important;
+}
+
+.tf-sticky-code {
+  position: sticky !important;
+  left: 200px !important;
+  z-index: 10 !important;
+  background-color: #ffffff !important;
+  min-width: 75px !important;
+  max-width: 80px !important;
+  border-right: 2px solid #000000 !important;
+}
+
+.tf-th-sticky-attraction {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 20 !important;
+  min-width: 200px !important;
+  max-width: 220px !important;
+}
+
+.tf-th-sticky-code {
+  position: sticky !important;
+  left: 200px !important;
+  z-index: 20 !important;
+  min-width: 75px !important;
+  max-width: 80px !important;
+  border-right: 2px solid #000000 !important;
+}
+
+.tf-sticky-group-header {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 9 !important;
+  background-color: #f1f5f9 !important;
+  text-align: left !important;
+  padding-left: 10px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+}
+
+/* Blue Input Cells (Male / Female) */
+.tf-cell-blue-input {
+  width: 100%;
+  border: 1px solid #bfdbfe;
+  background-color: #eff6ff; /* Soft sky blue */
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #1e3a8a;
+  padding: 3px 1px;
+  outline: none;
+  font-family: inherit;
+  border-radius: 2px;
+  box-sizing: border-box;
+}
+
+.tf-cell-blue-input:focus {
+  background-color: #dbeafe;
+  border-color: #2563eb;
+  font-weight: 700;
+}
+
+/* Formula Cells (Black / auto-calculated) */
+.tf-cell-formula {
+  background-color: #f8fafc;
+  font-weight: 700;
+  color: #0f172a;
+  min-width: 32px;
+  text-align: center;
+}
+
+.tf-cell-formula-grand {
+  background-color: #f1f5f9;
+  font-weight: 800;
+  color: #000000;
+  min-width: 34px;
+  text-align: center;
+}
+
+/* Yearly Total Column Block Highlight */
+.tf-col-yearly-header {
+  background-color: #fef08a !important; /* Richer gold */
+  color: #713f12 !important;
+  border-left: 2.5px solid #000000 !important;
+}
+
+.tf-cell-yearly {
+  background-color: #fefce8;
+  font-weight: 800;
+  color: #713f12;
+  border-left: 1px solid #cbd5e1;
+}
+
+/* Subtotal row for municipality */
+.tf-muni-subtotal-row td {
+  background-color: #fef9c3 !important; /* Soft warm yellow */
+  font-weight: 800 !important;
+  color: #000000 !important;
+  border-top: 1.5px solid #000000 !important;
+  border-bottom: 1.5px solid #000000 !important;
+}
+
+.tf-muni-subtotal-label {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 10 !important;
+  background-color: #fef9c3 !important;
+  text-align: right !important;
+  padding-right: 10px !important;
+  font-weight: 800 !important;
+  border-right: 2px solid #000000 !important;
+}
+
+.tf-prov-total-label {
+  position: sticky !important;
+  left: 0 !important;
+  z-index: 10 !important;
+  background-color: #90ee90 !important;
+  text-align: left !important;
+  padding-left: 10px !important;
+  font-weight: 800 !important;
+  border-right: 2px solid #000000 !important;
+}
+
+/* ==========================================================================
    Print Styles for Official Government Documentation
    ========================================================================== */
 @media print {
