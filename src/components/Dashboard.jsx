@@ -29,6 +29,7 @@ import BackupRecovery from "./BackupRecovery";
 import LGUApprovals from "./LGUApprovals";
 import CulturalRibbon from "./CulturalRibbon";
 import TourismForms from "./TourismForms";
+import ErrorBoundary from "./ErrorBoundary";
 import { fetchUsers, fetchLGUs, fetchEstablishments, fetchVisitorAnalytics, API_BASE_URL } from "../services/api";
 
 const MONTH_NAMES = [
@@ -675,7 +676,9 @@ const Dashboard = ({ user, onLogout }) => {
           {activeTab === "Inbox" ? (
             <Inbox user={user} />
           ) : activeTab === "Forms" || activeTab === "Official Forms" || activeTab === "Tourism Forms" ? (
-            <TourismForms user={user} />
+            <ErrorBoundary>
+              <TourismForms user={user} />
+            </ErrorBoundary>
           ) : activeTab === "Visitor Reports" || activeTab === "Visitor Report" ? (
             <VisitorReport onOpenForms={() => setActiveTab("Forms")} />
           ) : activeTab === "Establishments" ? (
