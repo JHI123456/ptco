@@ -1,7 +1,8 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import {
   FileSpreadsheet,
   Printer,
+  Download,
   RotateCcw,
   CheckCircle2,
   Calendar,
@@ -15,6 +16,7 @@ import {
 } from 'lucide-react';
 import { fetchEstablishments, API_BASE_URL } from '../services/api';
 import OfficialFormViewer from './OfficialFormViewer.jsx';
+import { exportMasterDOTWorkbook, exportSingleFormSubmissionExcel } from '../utils/excelExport.js';
 import './TourismForms.css';
 
 export async function fetchAllMunicipalSubmissions() {
@@ -175,10 +177,36 @@ export default function TourismForms({ user }) {
   const [activeFormTab, setActiveFormTab] = useState('MONTHLY_YEARLY');
   const [toastMsg, setToastMsg] = useState(null);
   const [muniSubmissionsCount, setMuniSubmissionsCount] = useState(0);
+  const [isExporting, setIsExporting] = useState(false);
+  const exportHandlersRef = useRef({});
 
   const showToast = (msg) => {
     setToastMsg(msg);
     setTimeout(() => setToastMsg(null), 3500);
+  };
+
+  const handleRegisterExport = useCallback((tabKey, handler) => {
+    exportHandlersRef.current[tabKey] = handler;
+  }, []);
+
+  const handleExportActiveExcel = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    try {
+      const handler = exportHandlersRef.current[activeFormTab];
+      if (typeof handler === 'function') {
+        await handler();
+        showToast('📥 Matagumpay na na-download ang official DOT Excel spreadsheet (.xlsx)!');
+      } else {
+        exportMasterDOTWorkbook({ activeTab: activeFormTab });
+        showToast('📥 Matagumpay na na-download ang official DOT Excel spreadsheet (.xlsx)!');
+      }
+    } catch (err) {
+      console.error('Export Excel failed:', err);
+      showToast('⚠️ Error sa pag-export ng Excel: ' + (err.message || 'Subukan muli'));
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handlePrint = () => {
@@ -210,6 +238,26 @@ export default function TourismForms({ user }) {
             >
               <Printer size={16} />
               Print / Save PDF
+            </button>
+
+            <button
+              type="button"
+              className="tf-btn tf-btn-primary"
+              onClick={handleExportActiveExcel}
+              disabled={isExporting}
+              title="Download official DOT spreadsheet directly as Excel (.xlsx)"
+              style={{
+                backgroundColor: '#15803d',
+                color: '#ffffff',
+                borderColor: '#166534',
+                fontWeight: 600,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}
+            >
+              <Download size={16} />
+              {isExporting ? 'Exporting...' : 'Download Excel'}
             </button>
           </div>
         </div>
@@ -269,12 +317,23 @@ export default function TourismForms({ user }) {
       )}
 
       {/* Render the Active Official Provincial Form */}
-      {activeFormTab === 'MONTHLY_YEARLY' && <MonthlyYearlyAttractionsForm onNotify={showToast} />}
-      {activeFormTab === 'PROVINCIAL_LGU' && <ProvincialLGUForm onNotify={showToast} />}
+      {activeFormTab === 'MONTHLY_YEARLY' && (
+        <MonthlyYearlyAttractionsForm
+          onNotify={showToast}
+          onRegisterExport={handleRegisterExport}
+        />
+      )}
+      {activeFormTab === 'PROVINCIAL_LGU' && (
+        <ProvincialLGUForm
+          onNotify={showToast}
+          onRegisterExport={handleRegisterExport}
+        />
+      )}
       {activeFormTab === 'MUNI_SUBMISSIONS' && (
         <MunicipalSubmissionsView
           onNotify={showToast}
           onCountChange={setMuniSubmissionsCount}
+          onRegisterExport={handleRegisterExport}
         />
       )}
     </div>
@@ -320,7 +379,7 @@ function normalizeMuni(str) {
     .trim();
 }
 
-function MonthlyYearlyAttractionsForm({ onNotify }) {
+function MonthlyYearlyAttractionsForm({ onNotify, onRegisterExport }) {
   const tableWrapRef = useRef(null);
 
   const [meta, setMeta] = useState({
@@ -729,6 +788,17 @@ function MonthlyYearlyAttractionsForm({ onNotify }) {
 
     return { attractionCalcs, muniCalcs, provCalcs };
   }, [municipalGroups, dataStore]);
+
+  useEffect(() => {
+    if (onRegisterExport) {
+      onRegisterExport('MONTHLY_YEARLY', () => {
+        exportMasterDOTWorkbook({
+          activeTab: 'MONTHLY_YEARLY',
+          monthlyYearlyData: { municipalGroups, codes, computedData, meta }
+        });
+      });
+    }
+  }, [municipalGroups, codes, computedData, meta, onRegisterExport]);
 
   return (
     <div className="tf-paper-sheet">
@@ -1381,7 +1451,7 @@ function MonthlyYearlyAttractionsForm({ onNotify }) {
    Matches Image 8 (Nueva Vizcaya Official Provincial Submission Sheet)
    100% Clean Blank Form - NO hardcoded numbers
    ========================================================================== */
-function ProvincialLGUForm({ onNotify }) {
+function ProvincialLGUForm({ onNotify, onRegisterExport }) {
   const [meta, setMeta] = useState({
     province: 'NUEVA VIZCAYA',
     period: '',
@@ -1510,6 +1580,17 @@ function ProvincialLGUForm({ onNotify }) {
       if (ch) ch.close();
     };
   }, [onNotify]);
+
+  useEffect(() => {
+    if (onRegisterExport) {
+      onRegisterExport('PROVINCIAL_LGU', () => {
+        exportMasterDOTWorkbook({
+          activeTab: 'PROVINCIAL_LGU',
+          provincialLGUData: { municipalities, dataStore, meta }
+        });
+      });
+    }
+  }, [municipalities, dataStore, meta, onRegisterExport]);
 
   const handleCellChange = (mIdx, muni, field, val) => {
     setDataStore((prev) => {
@@ -1759,7 +1840,7 @@ function ProvincialLGUForm({ onNotify }) {
    3. MUNICIPAL SUBMISSIONS & FORMS LOG VIEW
    Official filing repository for all municipal transmissions (VAR 2, DAE-2, etc.)
    ========================================================================== */
-function MunicipalSubmissionsView({ onNotify, onCountChange }) {
+function MunicipalSubmissionsView({ onNotify, onCountChange, onRegisterExport }) {
   const [submissions, setSubmissions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -1846,6 +1927,17 @@ function MunicipalSubmissionsView({ onNotify, onCountChange }) {
       return matchQuery && matchType;
     });
   }, [submissions, searchQuery, selectedFormType]);
+
+  useEffect(() => {
+    if (onRegisterExport) {
+      onRegisterExport('MUNI_SUBMISSIONS', () => {
+        exportMasterDOTWorkbook({
+          activeTab: 'MUNI_SUBMISSIONS',
+          muniSubmissionsData: filteredSubmissions.length > 0 ? filteredSubmissions : submissions,
+        });
+      });
+    }
+  }, [submissions, filteredSubmissions, onRegisterExport]);
 
   const totalVisitors = useMemo(() => {
     return submissions.reduce((sum, s) => sum + (Number(s.visitors) || 0), 0);
@@ -1999,6 +2091,18 @@ function MunicipalSubmissionsView({ onNotify, onCountChange }) {
                   style={{ background: '#334155', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 600 }}
                 >
                   🖨️ Print Sheet
+                </button>
+                <button
+                  type="button"
+                  className="tf-btn tf-btn-primary"
+                  onClick={() => {
+                    exportSingleFormSubmissionExcel(selectedSubmission);
+                    if (onNotify) onNotify(`📥 Na-download ang ${selectedSubmission.formType} bilang Excel (.xlsx)!`);
+                  }}
+                  style={{ background: '#15803d', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Download size={14} />
+                  Download Excel
                 </button>
                 <button
                   type="button"
