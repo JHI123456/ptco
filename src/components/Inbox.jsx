@@ -89,9 +89,21 @@ export default function Inbox({ user: _user }) {
         });
 
         if (items.length > 0) {
+          const approvedSubs = (() => {
+            try {
+              return JSON.parse(localStorage.getItem('turismotrack_approved_submissions') || '[]').map(String);
+            } catch { return []; }
+          })();
+
           const normalized = items.map((s) => {
             const isBroad = s.category === 'broadcast' || s.type === 'broadcast' || String(s.recipientId).includes('broadcast') || s.municipality === 'all' || s.recipient === 'All Municipalities' || s.recipientName === 'All Municipalities';
             const itemCategory = s.category || (isBroad ? 'broadcast' : (s.type === 'message' ? 'message' : 'submission'));
+            const sId = String(s._id || s.id || '');
+            const rawStatus = (s.status || 'pending').toLowerCase().replace(/\s+/g, '-');
+            const isApproved = rawStatus === 'approved' || approvedSubs.includes(sId);
+            const status = isApproved ? 'approved' : rawStatus;
+            const isLocked = isApproved || Boolean(s.isLocked);
+
             return {
               id: s._id || s.id,
               subject: s.subject || `${s.formType || 'Submission'}: ${s.establishmentName || s.sender || 'Municipal Submission'}`,
@@ -104,10 +116,10 @@ export default function Inbox({ user: _user }) {
               formType: s.formType || (isBroad ? 'Broadcast' : 'VAR 2'),
               category: itemCategory,
               type: s.type || (isBroad ? 'message' : 'submission'),
-              status: (s.status || 'pending').toLowerCase().replace(/\s+/g, '-'),
+              status,
               date: s.submittedAt ? new Date(s.submittedAt).toLocaleString() : (s.createdAt ? new Date(s.createdAt).toLocaleString() : new Date().toLocaleString()),
               unread: s.isRead === false,
-              isLocked: s.isLocked || false,
+              isLocked,
               details: {
                 totalVisitors: s.visitors || s.formData?.grandTotal || 0,
                 domesticGuests: s.formData?.localVisitors || 0,
@@ -118,13 +130,36 @@ export default function Inbox({ user: _user }) {
               formData: s.formData,
             };
           });
+
           setMessages((prev) => {
-            const combined = [...normalized];
+            const prevMap = new Map();
             prev.forEach((p) => {
-              if (!combined.some((c) => c.id === p.id || c.subject === p.subject)) {
+              if (p.id) prevMap.set(String(p.id), p);
+              if (p.subject) prevMap.set(p.subject, p);
+            });
+
+            const merged = normalized.map((item) => {
+              const p = prevMap.get(String(item.id)) || prevMap.get(item.subject);
+              if (p) {
+                const isApproved = p.status === 'approved' || item.status === 'approved' || approvedSubs.includes(String(item.id));
+                return {
+                  ...item,
+                  status: isApproved ? 'approved' : (p.status || item.status),
+                  isLocked: isApproved ? true : Boolean(p.isLocked || item.isLocked),
+                  unread: p.unread !== undefined ? p.unread : item.unread,
+                  revisionReason: p.revisionReason || item.revisionReason,
+                };
+              }
+              return item;
+            });
+
+            const combined = [...merged];
+            prev.forEach((p) => {
+              if (!combined.some((c) => String(c.id) === String(p.id) || c.subject === p.subject)) {
                 combined.push(p);
               }
             });
+
             try {
               localStorage.setItem('turismotrack_inbox_items', JSON.stringify(combined));
             } catch {}
@@ -276,26 +311,103 @@ export default function Inbox({ user: _user }) {
   // Actions
   const handleApprove = (id, e) => {
     if (e) e.stopPropagation();
+    const cleanId = String(id || '').trim();
+
+    // 1. Call backend APIs to mark submission approved & locked
+    fetch(`${API_BASE_URL}/inbox/${cleanId}/action`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-role': 'provincial',
+        'x-user-municipality': 'all',
+        'x-user-id': 'provincial-ptco',
+        'x-user-name': 'Provincial Tourism Officer',
+      },
+      body: JSON.stringify({ action: 'approve', remarks: 'Approved by Provincial Tourism Officer (PTCO)' }),
+    }).catch(() => {});
+
+    fetch(`${API_BASE_URL}/submissions/${cleanId}/action`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-role': 'provincial',
+        'x-user-municipality': 'all',
+        'x-user-id': 'provincial-ptco',
+        'x-user-name': 'Provincial Tourism Officer',
+      },
+      body: JSON.stringify({ action: 'approve', remarks: 'Approved by Provincial Tourism Officer (PTCO)' }),
+    }).catch(() => {});
+
+    fetch(`${API_BASE_URL}/inbox/${cleanId}/approve`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-role': 'provincial',
+      },
+      body: JSON.stringify({ action: 'approve' }),
+    }).catch(() => {});
+
+    // 2. Persist in approved submissions storage so polling never reverts it
+    try {
+      const approvedSubs = JSON.parse(localStorage.getItem('turismotrack_approved_submissions') || '[]');
+      if (cleanId && !approvedSubs.includes(cleanId)) {
+        approvedSubs.push(cleanId);
+        localStorage.setItem('turismotrack_approved_submissions', JSON.stringify(approvedSubs));
+      }
+    } catch {}
+
+    // 3. Update local state
     const updated = messages.map((m) =>
-      m.id === id ? { ...m, status: 'approved', isLocked: true, unread: false } : m
+      String(m.id) === cleanId ? { ...m, status: 'approved', isLocked: true, unread: false } : m
     );
     updateMessages(updated);
     showToast('Submission approved & locked for official records.');
-    if (selectedItem?.id === id) {
+    if (String(selectedItem?.id) === cleanId) {
       setSelectedItem((prev) => (prev ? { ...prev, status: 'approved', isLocked: true } : null));
     }
   };
 
   const handleReturnRevision = (id, e) => {
     if (e) e.stopPropagation();
+    const cleanId = String(id || '').trim();
     const reason = window.prompt(
       'Enter audit notes or required corrections for this filing:',
       'Please verify foreign visitor breakdowns and resubmit.'
     );
     if (reason === null) return;
 
+    fetch(`${API_BASE_URL}/inbox/${cleanId}/action`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-role': 'provincial',
+        'x-user-municipality': 'all',
+        'x-user-id': 'provincial-ptco',
+        'x-user-name': 'Provincial Tourism Officer',
+      },
+      body: JSON.stringify({ action: 'needs_revision', remarks: reason }),
+    }).catch(() => {});
+
+    fetch(`${API_BASE_URL}/submissions/${cleanId}/action`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-user-role': 'provincial',
+        'x-user-municipality': 'all',
+        'x-user-id': 'provincial-ptco',
+        'x-user-name': 'Provincial Tourism Officer',
+      },
+      body: JSON.stringify({ action: 'needs_revision', remarks: reason }),
+    }).catch(() => {});
+
+    try {
+      const approvedSubs = JSON.parse(localStorage.getItem('turismotrack_approved_submissions') || '[]');
+      const filtered = approvedSubs.filter((sid) => sid !== cleanId);
+      localStorage.setItem('turismotrack_approved_submissions', JSON.stringify(filtered));
+    } catch {}
+
     const updated = messages.map((m) =>
-      m.id === id
+      String(m.id) === cleanId
         ? {
             ...m,
             status: 'needs-revision',
@@ -306,18 +418,34 @@ export default function Inbox({ user: _user }) {
     );
     updateMessages(updated);
     showToast('Filing returned to municipality for revision.');
-    if (selectedItem?.id === id) {
-      setSelectedItem((prev) => (prev ? { ...prev, status: 'needs-revision', revisionReason: reason } : null));
+    if (String(selectedItem?.id) === cleanId) {
+      setSelectedItem((prev) => (prev ? { ...prev, status: 'needs-revision', revisionReason: reason, isLocked: false } : null));
     }
   };
 
   const handleDelete = (id, e) => {
     if (e) e.stopPropagation();
+    const cleanId = String(id || '').trim();
     if (window.confirm('Are you sure you want to remove this filing record?')) {
-      const updated = messages.filter((m) => m.id !== id);
+      fetch(`${API_BASE_URL}/inbox/${cleanId}`, {
+        method: 'DELETE',
+        headers: { 'x-user-role': 'provincial' },
+      }).catch(() => {});
+      fetch(`${API_BASE_URL}/submissions/${cleanId}`, {
+        method: 'DELETE',
+        headers: { 'x-user-role': 'provincial' },
+      }).catch(() => {});
+
+      try {
+        const approvedSubs = JSON.parse(localStorage.getItem('turismotrack_approved_submissions') || '[]');
+        const filtered = approvedSubs.filter((sid) => sid !== cleanId);
+        localStorage.setItem('turismotrack_approved_submissions', JSON.stringify(filtered));
+      } catch {}
+
+      const updated = messages.filter((m) => String(m.id) !== cleanId);
       updateMessages(updated);
       showToast('Record deleted.');
-      if (selectedItem?.id === id) setSelectedItem(null);
+      if (String(selectedItem?.id) === cleanId) setSelectedItem(null);
     }
   };
 
@@ -668,7 +796,7 @@ export default function Inbox({ user: _user }) {
                     <td className="tt-inbox-subject-cell">
                       <div className="tt-inbox-subject-row">
                         <span className="tt-inbox-item-subject">{item.subject}</span>
-                        {item.isLocked && (
+                        {(item.isLocked || item.status === 'approved') && (
                           <span className="tt-inbox-lock-badge" title="Official Approved Record">
                             <Lock size={11} /> Locked
                           </span>
@@ -721,7 +849,7 @@ export default function Inbox({ user: _user }) {
                           <Eye size={15} />
                         </button>
 
-                        {currentRole === 'admin' && !item.isLocked && (
+                        {currentRole === 'admin' && !item.isLocked && item.status !== 'approved' && (
                           <>
                             <button
                               type="button"
@@ -791,7 +919,7 @@ export default function Inbox({ user: _user }) {
                 <span className={`tt-inbox-status-pill ${selectedItem.status}`}>
                   {selectedItem.status}
                 </span>
-                {selectedItem.isLocked && (
+                {(selectedItem.isLocked || selectedItem.status === 'approved') && (
                   <span className="tt-inbox-lock-badge">
                     <Lock size={12} /> Approved & Locked
                   </span>
@@ -850,7 +978,7 @@ export default function Inbox({ user: _user }) {
               >
                 Close
               </button>
-              {currentRole === 'admin' && !selectedItem.isLocked && (
+              {currentRole === 'admin' && !selectedItem.isLocked && selectedItem.status !== 'approved' && (
                 <>
                   <button
                     type="button"
