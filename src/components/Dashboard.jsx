@@ -94,11 +94,28 @@ const Dashboard = ({ user, onLogout }) => {
 
           if (!isMuni) return false;
           if (baselineEmails.includes(email)) return false;
-          if (approved.includes(email) || approved.includes(id) || (muni && approved.includes(muni)) || verif === "approved") return false;
+          if (status === "active" || status === "optimal" || verif === "approved") return false;
+          if (approved.includes(email) || approved.includes(id) || (muni && approved.includes(muni))) return false;
           if (rejected.includes(email) || rejected.includes(id) || status === "rejected" || verif === "rejected") return false;
 
-          return true;
+          const isPending = status === "pending" || verif === "pending" || u.isRegistered === false;
+          return isPending;
         });
+
+        // Also check if any in turismotrack_pending_munis not yet in uList
+        try {
+          const localPending = JSON.parse(localStorage.getItem("turismotrack_pending_munis") || "[]");
+          localPending.forEach((lp) => {
+            const lpEmail = String(lp.email || "").toLowerCase().trim();
+            const lpMuni = String(lp.municipality || "").toLowerCase().trim();
+            const lpId = String(lp._id || lp.id || "");
+            if (baselineEmails.includes(lpEmail)) return;
+            if (approved.includes(lpEmail) || approved.includes(lpId) || (lpMuni && approved.includes(lpMuni))) return;
+            if (rejected.includes(lpEmail) || rejected.includes(lpId)) return;
+            const alreadyInPend = pend.some((p) => String(p.email || "").toLowerCase().trim() === lpEmail);
+            if (!alreadyInPend) pend.push(lp);
+          });
+        } catch {}
 
         setPendingMuniCount(pend.length);
       })

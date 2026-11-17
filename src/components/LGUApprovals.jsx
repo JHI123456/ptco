@@ -23,6 +23,25 @@ export default function LGUApprovals({ user, onRefreshCount }) {
     if (!isSilent) setLoading(true);
     try {
       let list = [];
+
+      const approvedAccounts = (() => {
+        try {
+          return JSON.parse(localStorage.getItem("turismotrack_approved_accounts") || "[]").map(x => String(x).toLowerCase().trim());
+        } catch { return []; }
+      })();
+
+      const approvedMunis = (() => {
+        try {
+          return JSON.parse(localStorage.getItem("turismotrack_approved_munis") || "[]").map(x => String(x).toLowerCase().trim());
+        } catch { return []; }
+      })();
+
+      const rejectedAccounts = (() => {
+        try {
+          return JSON.parse(localStorage.getItem("turismotrack_rejected_accounts") || "[]").map(x => String(x).toLowerCase().trim());
+        } catch { return []; }
+      })();
+
       // 1. Try dedicated pending approvals endpoint
       try {
         const res = await fetch(`${API_BASE_URL}/auth/pending-approvals?role=Provincial&_t=${Date.now()}`);
@@ -45,16 +64,25 @@ export default function LGUApprovals({ user, onRefreshCount }) {
             const estType = String(u.establishmentType || "").toLowerCase();
             const isMuni = role.includes("municipality") || role.includes("muni") || estType.includes("municipal");
             const uEmail = String(u.email || "").toLowerCase().trim();
+            const uId = String(u._id || u.id || "").trim();
             const status = String(u.status || "").toLowerCase();
             const verif = String(u.verificationStatus || "").toLowerCase();
+            const detectedMuni = u.municipality || (u.name && u.name.replace(/Municipal|Tourism|Office/gi, '').trim()) || 'Municipal';
+            const muniKey = detectedMuni.toLowerCase().trim();
 
-            // Account is pending if explicitly pending OR newly registered municipal account not in default baseline list
-            const isPending = status === "pending" || verif === "pending" || u.isRegistered === false || !DEFAULT_ACTIVE_EMAILS.includes(uEmail);
+            if (!isMuni) return;
+            // Baseline accounts or already active/approved accounts are never pending
+            if (DEFAULT_ACTIVE_EMAILS.includes(uEmail)) return;
+            if (status === "active" || status === "optimal" || verif === "approved") return;
+            if (approvedAccounts.includes(uEmail) || (uId && approvedAccounts.includes(uId)) || (muniKey && approvedMunis.includes(muniKey))) return;
+            if (rejectedAccounts.includes(uEmail) || (uId && rejectedAccounts.includes(uId)) || status === "rejected" || verif === "rejected") return;
 
-            if (isMuni && isPending) {
-              const alreadyInList = list.some(l => (l.email || "").toLowerCase() === uEmail || String(l._id || l.id) === String(u._id || u.id));
+            // Only explicitly pending registrations
+            const isPending = status === "pending" || verif === "pending" || u.isRegistered === false;
+
+            if (isPending) {
+              const alreadyInList = list.some(l => (l.email || "").toLowerCase().trim() === uEmail || String(l._id || l.id) === uId);
               if (!alreadyInList) {
-                const detectedMuni = u.municipality || (u.name && u.name.replace(/Municipal|Tourism|Office/gi, '').trim()) || 'Municipal';
                 list.push({
                   _id: u._id || u.id || `muni_${Date.now()}`,
                   id: u.id || u._id,
@@ -63,7 +91,8 @@ export default function LGUApprovals({ user, onRefreshCount }) {
                   municipality: detectedMuni,
                   email: u.email,
                   role: u.role || 'Municipality Admin',
-                  status: 'pending',
+                  status: u.status || 'pending',
+                  verificationStatus: u.verificationStatus || 'pending',
                   createdAt: u.createdAt || new Date().toISOString(),
                 });
               }
@@ -77,7 +106,14 @@ export default function LGUApprovals({ user, onRefreshCount }) {
         const storedPending = JSON.parse(localStorage.getItem("turismotrack_pending_munis") || "[]");
         storedPending.forEach((sp) => {
           const spEmail = (sp.email || "").toLowerCase().trim();
-          const alreadyInList = list.some((l) => (l.email || "").toLowerCase() === spEmail);
+          const spId = String(sp._id || sp.id || "").trim();
+          const spMuni = String(sp.municipality || "").toLowerCase().trim();
+
+          if (DEFAULT_ACTIVE_EMAILS.includes(spEmail)) return;
+          if (approvedAccounts.includes(spEmail) || (spId && approvedAccounts.includes(spId)) || (spMuni && approvedMunis.includes(spMuni))) return;
+          if (rejectedAccounts.includes(spEmail) || (spId && rejectedAccounts.includes(spId))) return;
+
+          const alreadyInList = list.some((l) => (l.email || "").toLowerCase().trim() === spEmail);
           if (!alreadyInList) {
             list.push({
               _id: sp._id || `muni_${Date.now()}`,
@@ -88,31 +124,14 @@ export default function LGUApprovals({ user, onRefreshCount }) {
               email: sp.email,
               role: sp.role || "Municipality Admin",
               status: "pending",
+              verificationStatus: "pending",
               createdAt: sp.createdAt || new Date().toISOString(),
             });
           }
         });
       } catch (e) {}
 
-      // 4. Filter out accounts that have already been approved or rejected by PTCO
-      const approvedAccounts = (() => {
-        try {
-          return JSON.parse(localStorage.getItem("turismotrack_approved_accounts") || "[]");
-        } catch { return []; }
-      })();
-
-      const approvedMunis = (() => {
-        try {
-          return JSON.parse(localStorage.getItem("turismotrack_approved_munis") || "[]");
-        } catch { return []; }
-      })();
-
-      const rejectedAccounts = (() => {
-        try {
-          return JSON.parse(localStorage.getItem("turismotrack_rejected_accounts") || "[]");
-        } catch { return []; }
-      })();
-
+      // 4. Strict filter to ensure no approved or active account remains in pending list
       list = list.filter(item => {
         const email = (item.email || "").toLowerCase().trim();
         const id = String(item._id || item.id || "");
@@ -122,11 +141,11 @@ export default function LGUApprovals({ user, onRefreshCount }) {
 
         // Baseline active accounts are never pending
         if (DEFAULT_ACTIVE_EMAILS.includes(email)) return false;
+        if (status === "active" || status === "optimal" || verif === "approved") return false;
 
         const isApproved = approvedAccounts.includes(email) ||
                            approvedAccounts.includes(id) ||
-                           (muni && approvedMunis.some(m => String(m).toLowerCase().trim() === muni)) ||
-                           verif === "approved";
+                           (muni && approvedMunis.some(m => String(m).toLowerCase().trim() === muni));
         const isRejected = rejectedAccounts.includes(email) ||
                            rejectedAccounts.includes(id) ||
                            status === "rejected" ||
@@ -179,30 +198,87 @@ export default function LGUApprovals({ user, onRefreshCount }) {
   const handleApprove = async (id, muniName, email) => {
     if (!window.confirm(`Aprubahan at i-activate ang Municipal Tourism Office ng "${muniName}"? Magkakaroon na sila ng access sa Municipal Portal.`)) return;
     setActionLoadingId(id);
+    const cleanEmail = (email || "").toLowerCase().trim();
+    const cleanId = String(id || "").trim();
+    const cleanMuni = (muniName || "").trim();
+    const lowerMuni = cleanMuni.toLowerCase();
+
     try {
-      fetch(`${API_BASE_URL}/auth/approve-municipal/${id}`, {
+      // 1. Call approve-municipal API
+      fetch(`${API_BASE_URL}/auth/approve-municipal/${cleanId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ approvedBy: user?.name || "Provincial Tourism Officer (PTCO)", email }),
+        body: JSON.stringify({ approvedBy: user?.name || "Provincial Tourism Officer (PTCO)", email: cleanEmail }),
       }).catch(() => {});
 
+      // Fallback: Also update user directly via API if available
+      fetch(`${API_BASE_URL}/users/${cleanId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "active", verificationStatus: "approved" }),
+      }).catch(() => {});
+
+      // 2. Persist in approved lists
       try {
         const approved = JSON.parse(localStorage.getItem("turismotrack_approved_accounts") || "[]");
-        if (email && !approved.includes(email.toLowerCase().trim())) approved.push(email.toLowerCase().trim());
-        if (id && !approved.includes(String(id))) approved.push(String(id));
+        if (cleanEmail && !approved.includes(cleanEmail)) approved.push(cleanEmail);
+        if (cleanId && !approved.includes(cleanId)) approved.push(cleanId);
         localStorage.setItem("turismotrack_approved_accounts", JSON.stringify(approved));
 
         const approvedMunis = JSON.parse(localStorage.getItem("turismotrack_approved_munis") || "[]");
-        if (muniName && !approvedMunis.includes(muniName)) approvedMunis.push(muniName);
+        if (cleanMuni && !approvedMunis.includes(cleanMuni)) approvedMunis.push(cleanMuni);
+        if (lowerMuni && !approvedMunis.includes(lowerMuni)) approvedMunis.push(lowerMuni);
         localStorage.setItem("turismotrack_approved_munis", JSON.stringify(approvedMunis));
+
+        // 3. Remove completely from turismotrack_pending_munis
+        const pendingMunis = JSON.parse(localStorage.getItem("turismotrack_pending_munis") || "[]");
+        const remainingPending = pendingMunis.filter((p) => {
+          const pEmail = (p.email || "").toLowerCase().trim();
+          const pId = String(p._id || p.id || "").trim();
+          const pMuni = String(p.municipality || "").toLowerCase().trim();
+          if (cleanEmail && pEmail === cleanEmail) return false;
+          if (cleanId && (pId === cleanId || pId === `muni_${cleanId}`)) return false;
+          if (lowerMuni && pMuni === lowerMuni) return false;
+          return true;
+        });
+        localStorage.setItem("turismotrack_pending_munis", JSON.stringify(remainingPending));
+
+        // 4. Update turismotrack_local_accounts
+        const localAccounts = JSON.parse(localStorage.getItem("turismotrack_local_accounts") || "[]");
+        const updatedLocalAccounts = localAccounts.map((acc) => {
+          const accEmail = (acc.email || "").toLowerCase().trim();
+          const accMuni = String(acc.municipality || "").toLowerCase().trim();
+          if ((cleanEmail && accEmail === cleanEmail) || (lowerMuni && accMuni === lowerMuni)) {
+            return { ...acc, status: "active", verificationStatus: "approved" };
+          }
+          return acc;
+        });
+        localStorage.setItem("turismotrack_local_accounts", JSON.stringify(updatedLocalAccounts));
       } catch (e) {}
 
-      const updated = pendingList.filter(p => p._id !== id && p.id !== id && (email ? (p.email || "").toLowerCase() !== email.toLowerCase() : true));
+      // 5. Update local state immediately
+      const updated = pendingList.filter((p) => {
+        const pEmail = (p.email || "").toLowerCase().trim();
+        const pId = String(p._id || p.id || "").trim();
+        const pMuni = String(p.municipality || "").toLowerCase().trim();
+        if (cleanId && (pId === cleanId || p._id === id || p.id === id)) return false;
+        if (cleanEmail && pEmail === cleanEmail) return false;
+        if (lowerMuni && pMuni === lowerMuni) return false;
+        return true;
+      });
       setPendingList(updated);
       if (onRefreshCount) onRefreshCount(updated.length);
 
       showToast(`✅ Naaprubahan na ang Munisipalidad ng ${muniName}! Maaari na silang mag-log in.`);
-      window.dispatchEvent(new CustomEvent("tt-muni-approved", { detail: { municipality: muniName, email } }));
+      window.dispatchEvent(new CustomEvent("tt-muni-approved", { detail: { municipality: muniName, email: cleanEmail } }));
+
+      if (typeof window !== "undefined" && "BroadcastChannel" in window) {
+        try {
+          const ch = new BroadcastChannel("turismotrack_realtime");
+          ch.postMessage({ type: "municipal:approved", email: cleanEmail, id: cleanId, municipality: muniName });
+          ch.close();
+        } catch {}
+      }
     } catch {
       showToast("❌ Network error habang nag-aapruba.");
     } finally {
@@ -213,21 +289,47 @@ export default function LGUApprovals({ user, onRefreshCount }) {
   const handleReject = async (id, muniName, email) => {
     if (!window.confirm(`Sigurado ka bang tatanggihan ang registration ng Munisipalidad ng "${muniName}"?`)) return;
     setActionLoadingId(id);
+    const cleanEmail = (email || "").toLowerCase().trim();
+    const cleanId = String(id || "").trim();
+    const cleanMuni = (muniName || "").trim();
+    const lowerMuni = cleanMuni.toLowerCase();
+
     try {
-      fetch(`${API_BASE_URL}/auth/reject-municipal/${id}`, {
+      fetch(`${API_BASE_URL}/auth/reject-municipal/${cleanId}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, municipality: muniName }),
+        body: JSON.stringify({ email: cleanEmail, municipality: muniName }),
       }).catch(() => {});
 
       try {
         const rejected = JSON.parse(localStorage.getItem("turismotrack_rejected_accounts") || "[]");
-        if (email && !rejected.includes(email.toLowerCase().trim())) rejected.push(email.toLowerCase().trim());
-        if (id && !rejected.includes(String(id))) rejected.push(String(id));
+        if (cleanEmail && !rejected.includes(cleanEmail)) rejected.push(cleanEmail);
+        if (cleanId && !rejected.includes(cleanId)) rejected.push(cleanId);
         localStorage.setItem("turismotrack_rejected_accounts", JSON.stringify(rejected));
+
+        // Remove from pending munis
+        const pendingMunis = JSON.parse(localStorage.getItem("turismotrack_pending_munis") || "[]");
+        const remainingPending = pendingMunis.filter((p) => {
+          const pEmail = (p.email || "").toLowerCase().trim();
+          const pId = String(p._id || p.id || "").trim();
+          const pMuni = String(p.municipality || "").toLowerCase().trim();
+          if (cleanEmail && pEmail === cleanEmail) return false;
+          if (cleanId && (pId === cleanId || pId === `muni_${cleanId}`)) return false;
+          if (lowerMuni && pMuni === lowerMuni) return false;
+          return true;
+        });
+        localStorage.setItem("turismotrack_pending_munis", JSON.stringify(remainingPending));
       } catch (e) {}
 
-      const updated = pendingList.filter(p => p._id !== id && p.id !== id && (email ? (p.email || "").toLowerCase() !== email.toLowerCase() : true));
+      const updated = pendingList.filter((p) => {
+        const pEmail = (p.email || "").toLowerCase().trim();
+        const pId = String(p._id || p.id || "").trim();
+        const pMuni = String(p.municipality || "").toLowerCase().trim();
+        if (cleanId && (pId === cleanId || p._id === id || p.id === id)) return false;
+        if (cleanEmail && pEmail === cleanEmail) return false;
+        if (lowerMuni && pMuni === lowerMuni) return false;
+        return true;
+      });
       setPendingList(updated);
       if (onRefreshCount) onRefreshCount(updated.length);
 
@@ -236,7 +338,7 @@ export default function LGUApprovals({ user, onRefreshCount }) {
       if (typeof window !== "undefined" && "BroadcastChannel" in window) {
         try {
           const ch = new BroadcastChannel("turismotrack_realtime");
-          ch.postMessage({ type: "municipal:rejected", email, id, municipality: muniName });
+          ch.postMessage({ type: "municipal:rejected", email: cleanEmail, id: cleanId, municipality: muniName });
           ch.close();
         } catch {}
       }

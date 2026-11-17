@@ -63,6 +63,21 @@ export default function Inbox({ user: _user }) {
             s.type === 'broadcast';
           if (isProvincialSender) return true;
 
+          // Official municipal submissions to Province (VAR 2, Form DAE-2, DOT Form, etc.) are ALWAYS visible!
+          const isFromMuni =
+            sender.includes('municipal') ||
+            sender.includes('lgu') ||
+            sender.includes('ptco') ||
+            senderRole.includes('municipal') ||
+            senderRole.includes('admin') ||
+            s.establishmentId?.startsWith('muni-') ||
+            String(s.status || '').toLowerCase().includes('province') ||
+            s.recipientId === 'provincial' ||
+            s.category === 'broadcast' ||
+            s.type === 'broadcast';
+
+          if (isFromMuni) return true;
+
           const isEstForm = [
             'FORM A', 'DAE 1A', 'DAE 3B2', 'DAE 3B.2', 'DAE 2', 'DAE 4A', 'DOT', 'CUS', 'HOLIDAY', 'CHECK-IN', 'CHECKIN'
           ].some((x) => fType.includes(x));
@@ -70,8 +85,7 @@ export default function Inbox({ user: _user }) {
           if ((senderRole.includes('accommodation') || senderRole.includes('manager')) && !fType.includes('VAR 2') && !fType.includes('REPORT')) return false;
 
           const isReport = fType.includes('VAR 2') || fType.includes('REPORT') || s.type === 'report' || s.category === 'report' || String(s.status || '').toLowerCase().includes('province');
-          const isFromMuni = sender.includes('municipal') || sender.includes('lgu') || sender.includes('ptco') || s.category === 'broadcast' || s.type === 'broadcast';
-          return isReport || isFromMuni;
+          return isReport;
         });
 
         if (items.length > 0) {

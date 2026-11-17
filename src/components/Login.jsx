@@ -428,17 +428,22 @@ export default function Login({ onLogin }) {
             try { return JSON.parse(localStorage.getItem('turismotrack_approved_munis') || '[]'); }
             catch { return []; }
         })();
+        const approvedAccounts = (() => {
+            try { return JSON.parse(localStorage.getItem('turismotrack_approved_accounts') || '[]'); }
+            catch { return []; }
+        })();
         const pendingMunis = (() => {
             try { return JSON.parse(localStorage.getItem('turismotrack_pending_munis') || '[]'); }
             catch { return []; }
         })();
         const isPendingMuni =
-            trimmedEmail.includes('alfonso') ||
             pendingMunis.some(p => (p.email || p).toLowerCase() === trimmedEmail);
 
         const matchedPending = pendingMunis.find(p => (p.email || p).toLowerCase() === trimmedEmail);
-        const pendingMuniName = matchedPending?.municipality || (trimmedEmail.includes('alfonso') ? 'Alfonso Castañeda' : '');
-        const isApproved = pendingMuniName && approvedMunis.some(m => m.toLowerCase() === pendingMuniName.toLowerCase());
+        const pendingMuniName = matchedPending?.municipality || '';
+        const isApproved =
+            (pendingMuniName && approvedMunis.some(m => m.toLowerCase() === pendingMuniName.toLowerCase())) ||
+            approvedAccounts.some(a => String(a).toLowerCase().trim() === trimmedEmail);
 
         if (isPendingMuni && !isApproved) {
             setIsLoading(false);
