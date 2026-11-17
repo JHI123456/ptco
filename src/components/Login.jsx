@@ -349,6 +349,11 @@ export default function Login({ onLogin }) {
                 return JSON.parse(localStorage.getItem('turismotrack_approved_munis') || '[]');
             } catch { return []; }
         })();
+        const approvedAccounts = (() => {
+            try {
+                return JSON.parse(localStorage.getItem('turismotrack_approved_accounts') || '[]');
+            } catch { return []; }
+        })();
 
         const munis = [
             'Bayombong', 'Solano', 'Bambang', 'Diadi', 'Dupax del Sur',
@@ -357,10 +362,12 @@ export default function Login({ onLogin }) {
         ];
         for (const m of munis) {
             const key = m.toLowerCase().replace(/[^a-z0-9]/g, '');
-            const isApproved = m.toLowerCase() === 'bayombong' || approvedMunis.some(am => am.toLowerCase() === m.toLowerCase() || am.toLowerCase() === key);
+            const isApproved = m.toLowerCase() === 'bayombong' ||
+                               approvedMunis.some(am => am.toLowerCase() === m.toLowerCase() || am.toLowerCase() === key) ||
+                               approvedAccounts.some(aa => aa.toLowerCase().includes(key) || aa.toLowerCase() === clean);
             if (
                 isApproved &&
-                (clean === `${key}tourism@gmail.com` || clean === `${key}@gmail.com` || clean === `tourism@${key}.gov.ph`) &&
+                (clean === `${key}tourism@gmail.com` || clean === `${key}@gmail.com` || clean === `tourism@${key}.gov.ph` || clean.includes(key)) &&
                 (pwd === 'user1234' || pwd === 'admin123')
             ) {
                 return {
@@ -396,8 +403,11 @@ export default function Login({ onLogin }) {
                 (a) => a.email === clean && (!a.password || a.password === pwd)
             );
             if (matched) {
-                const isPending = matched.status === 'pending' || matched.verificationStatus === 'pending' || matched.isRegistered === false;
-                const isApproved = approvedMunis.some(am => am.toLowerCase() === (matched.municipality || '').toLowerCase());
+                const isPending = matched.status === 'pending' || matched.verificationStatus === 'pending';
+                const isApproved = approvedMunis.some(am => am.toLowerCase() === (matched.municipality || '').toLowerCase()) ||
+                                   approvedAccounts.some(aa => aa.toLowerCase() === clean) ||
+                                   matched.status === 'active' ||
+                                   matched.verificationStatus === 'approved';
                 if (!isPending || isApproved) {
                     return matched;
                 }
@@ -423,16 +433,16 @@ export default function Login({ onLogin }) {
 
         const trimmedEmail = email.trim().toLowerCase();
 
-        // 🛑 Pending Verification Gate: Block unapproved municipal accounts from logging in
-        const approvedMunis = (() => {
+        // 🛑 Pending Verification Gate: Check approvals with live API fallback
+        let approvedMunis = (() => {
             try { return JSON.parse(localStorage.getItem('turismotrack_approved_munis') || '[]'); }
             catch { return []; }
         })();
-        const approvedAccounts = (() => {
+        let approvedAccounts = (() => {
             try { return JSON.parse(localStorage.getItem('turismotrack_approved_accounts') || '[]'); }
             catch { return []; }
         })();
-        const pendingMunis = (() => {
+        let pendingMunis = (() => {
             try { return JSON.parse(localStorage.getItem('turismotrack_pending_munis') || '[]'); }
             catch { return []; }
         })();
@@ -441,9 +451,42 @@ export default function Login({ onLogin }) {
 
         const matchedPending = pendingMunis.find(p => (p.email || p).toLowerCase() === trimmedEmail);
         const pendingMuniName = matchedPending?.municipality || '';
-        const isApproved =
+        let isApproved =
             (pendingMuniName && approvedMunis.some(m => m.toLowerCase() === pendingMuniName.toLowerCase())) ||
             approvedAccounts.some(a => String(a).toLowerCase().trim() === trimmedEmail);
+
+        // 🌐 LIVE FALLBACK: If flagged as pending locally, check live /api/users to see if Provincial Officer activated it
+        if (isPendingMuni && !isApproved) {
+            try {
+                const uRes = await fetch(`${API_BASE_URL}/users?_t=${Date.now()}`);
+                if (uRes.ok) {
+                    const uData = await uRes.json();
+                    const uList = Array.isArray(uData) ? uData : (uData?.data || []);
+                    const found = uList.find((u) => {
+                        const uEmail = String(u.email || '').toLowerCase().trim();
+                        const uMuni = String(u.municipality || '').toLowerCase().trim();
+                        return uEmail === trimmedEmail || (pendingMuniName && uMuni === pendingMuniName.toLowerCase().trim());
+                    });
+                    if (found) {
+                        const st = String(found.status || '').toLowerCase();
+                        const ver = String(found.verificationStatus || '').toLowerCase();
+                        if (st === 'active' || st === 'optimal' || ver === 'approved') {
+                            isApproved = true;
+                            if (!approvedAccounts.includes(trimmedEmail)) {
+                                approvedAccounts.push(trimmedEmail);
+                                localStorage.setItem('turismotrack_approved_accounts', JSON.stringify(approvedAccounts));
+                            }
+                            if (found.municipality && !approvedMunis.includes(found.municipality)) {
+                                approvedMunis.push(found.municipality);
+                                localStorage.setItem('turismotrack_approved_munis', JSON.stringify(approvedMunis));
+                            }
+                            const remPending = pendingMunis.filter((p) => (p.email || p).toLowerCase() !== trimmedEmail);
+                            localStorage.setItem('turismotrack_pending_munis', JSON.stringify(remPending));
+                        }
+                    }
+                }
+            } catch (e) {}
+        }
 
         if (isPendingMuni && !isApproved) {
             setIsLoading(false);
