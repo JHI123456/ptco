@@ -19,8 +19,153 @@ import OfficialFormViewer from './OfficialFormViewer.jsx';
 import { exportMasterDOTWorkbook, exportSingleFormSubmissionExcel } from '../utils/excelExport.js';
 import './TourismForms.css';
 
+const APPROVAL_MONTH_MAP = {
+  jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+  jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
+};
+
+function cleanMatchStr(s) {
+  return String(s || '')
+    .toUpperCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Z0-9]/g, '');
+}
+
+export function buildSubmissionApprovalKeys(item) {
+  if (!item) return [];
+  const keys = [];
+  const rawId = String(item.id || item._id || '').trim();
+  if (rawId) keys.push(`ID__${rawId}`);
+  if (item.parentId) keys.push(`ID__${String(item.parentId).trim()}`);
+  if (item.formId) keys.push(`ID__${String(item.formId).trim()}`);
+
+  const muni = cleanMatchStr(item.municipality || item.formData?.municipality || '');
+  const rawType = cleanMatchStr(item.formType || item.formData?.formType || '');
+  const formKind = rawType.includes('VAR2')
+    ? 'VAR2'
+    : rawType.includes('DAE2')
+    ? 'DAE2'
+    : rawType.includes('DOT')
+    ? 'DOT'
+    : rawType.includes('CUS')
+    ? 'CUS'
+    : rawType || 'REPORT';
+
+  const periodText = String(
+    item.monthYear ||
+      item.reportingPeriod ||
+      item.formData?.monthYear ||
+      item.formData?.reportingPeriod ||
+      item.details?.reportingPeriod ||
+      item.subject ||
+      item.title ||
+      ''
+  ).toLowerCase();
+
+  let mIdx = -1;
+  for (const [k, v] of Object.entries(APPROVAL_MONTH_MAP)) {
+    if (periodText.includes(k)) {
+      mIdx = v;
+      break;
+    }
+  }
+  if (mIdx === -1 && item.reportingMonth !== undefined && !Number.isNaN(Number(item.reportingMonth))) {
+    const parsedM = Number(item.reportingMonth);
+    if (parsedM >= 0 && parsedM <= 11) mIdx = parsedM;
+  }
+
+  if (muni && mIdx !== -1) {
+    keys.push(`${muni}__${formKind}__M${mIdx}`);
+    if (formKind === 'VAR2' || formKind === 'DAE2' || formKind === 'REPORT') {
+      keys.push(`${muni}__M${mIdx}`);
+    }
+  }
+  const cleanPeriod = cleanMatchStr(
+    item.monthYear || item.reportingPeriod || item.formData?.monthYear || item.formData?.reportingPeriod || item.details?.reportingPeriod || ''
+  );
+  if (muni && cleanPeriod) {
+    keys.push(`${muni}__${formKind}__${cleanPeriod}`);
+  }
+  return Array.from(new Set(keys));
+}
+
+function isRawStatusApproved(status, isLocked) {
+  if (isLocked === true) return true;
+  const st = String(status || '').trim().toLowerCase();
+  return st === 'approved' || st === 'approved by province' || st === 'verified';
+}
+
+function isRawStatusRevisedOrRejected(status) {
+  const st = String(status || '').trim().toLowerCase();
+  return (
+    st === 'needs-revision' ||
+    st === 'needs_revision' ||
+    st === 'needs revision' ||
+    st === 'rejected' ||
+    st === 'returned'
+  );
+}
+
 export async function fetchAllMunicipalSubmissions() {
   const docs = [];
+  const approvedIds = new Set();
+  const approvedKeys = new Set();
+  const revisedKeys = new Set();
+
+  // Read locally persisted approval/revision records from Provincial Inbox
+  try {
+    const localApprovedIds = JSON.parse(localStorage.getItem('turismotrack_approved_submissions') || '[]');
+    localApprovedIds.forEach((id) => {
+      if (id) {
+        approvedIds.add(String(id).trim());
+        approvedKeys.add(`ID__${String(id).trim()}`);
+      }
+    });
+    const localApprovedKeys = JSON.parse(localStorage.getItem('turismotrack_approved_form_keys') || '[]');
+    localApprovedKeys.forEach((k) => {
+      if (k) approvedKeys.add(String(k));
+    });
+    const localRevisedKeys = JSON.parse(localStorage.getItem('turismotrack_revised_form_keys') || '[]');
+    localRevisedKeys.forEach((k) => {
+      if (k) revisedKeys.add(String(k));
+    });
+    const localInboxItems = JSON.parse(localStorage.getItem('turismotrack_inbox_items') || '[]');
+    localInboxItems.forEach((item) => {
+      const keys = buildSubmissionApprovalKeys(item);
+      if (isRawStatusApproved(item.status, item.isLocked)) {
+        if (item.id) approvedIds.add(String(item.id).trim());
+        keys.forEach((k) => approvedKeys.add(k));
+      } else if (isRawStatusRevisedOrRejected(item.status)) {
+        keys.forEach((k) => revisedKeys.add(k));
+      }
+    });
+  } catch {}
+
+  // Fetch live Provincial Inbox FIRST so authoritative approval statuses are collected
+  const inboxItems = [];
+  try {
+    const inbRes = await fetch(`${API_BASE_URL}/inbox`, {
+      headers: { 'x-user-role': 'provincial' },
+    });
+    if (inbRes.ok) {
+      const inbJson = await inbRes.json();
+      const items = Array.isArray(inbJson) ? inbJson : inbJson.data || [];
+      items.forEach((item) => {
+        inboxItems.push(item);
+        const keys = buildSubmissionApprovalKeys(item);
+        if (isRawStatusApproved(item.status, item.isLocked)) {
+          const idStr = String(item.id || item._id || '').trim();
+          if (idStr) approvedIds.add(idStr);
+          if (item.parentId) approvedIds.add(String(item.parentId).trim());
+          keys.forEach((k) => approvedKeys.add(k));
+        } else if (isRawStatusRevisedOrRejected(item.status)) {
+          keys.forEach((k) => revisedKeys.add(k));
+        }
+      });
+    }
+  } catch {}
+
   try {
     const res = await fetch(`${API_BASE_URL}/forms/submitted-to-province`);
     if (res.ok) {
@@ -69,55 +214,55 @@ export async function fetchAllMunicipalSubmissions() {
     }
   } catch {}
 
-  // Multi-source fallback: also fetch from /inbox (which has official LGU submissions)
-  try {
-    const inbRes = await fetch(`${API_BASE_URL}/inbox`, {
-      headers: { 'x-user-role': 'provincial' },
-    });
-    if (inbRes.ok) {
-      const inbJson = await inbRes.json();
-      const items = Array.isArray(inbJson) ? inbJson : inbJson.data || [];
-      items.forEach((item) => {
-        const isMuniReport =
-          item.formType?.includes('VAR 2') ||
-          item.formType?.includes('DAE 2') ||
-          item.formType?.includes('DOT') ||
-          item.formType?.includes('CUS') ||
-          item.formData?.rows ||
-          item.status === 'Submitted to Province';
+  // Multi-source fallback: merge official LGU submissions from /inbox
+  inboxItems.forEach((item) => {
+    const isMuniReport =
+      item.formType?.includes('VAR 2') ||
+      item.formType?.includes('DAE 2') ||
+      item.formType?.includes('DOT') ||
+      item.formType?.includes('CUS') ||
+      item.formData?.rows ||
+      item.status === 'Submitted to Province' ||
+      isRawStatusApproved(item.status, item.isLocked);
 
-        if (isMuniReport) {
-          const fd = item.formData || {};
-          const muni = item.municipality || fd.municipality || 'BAYOMBONG';
-          const p = fd.monthYear || fd.reportingPeriod || 'Nov-26';
-          const already = docs.some(
-            (d) =>
-              d.formType === (item.formType || 'VAR 2') &&
-              d.municipality?.toUpperCase() === muni.toUpperCase() &&
-              (d.reportingPeriod === p || d.monthYear === p)
-          );
-          if (!already) {
-            docs.push({
-              id: item.id || item._id,
-              formId: item.id || item._id,
-              formType: item.formType || 'VAR 2',
-              title: item.subject || `${item.formType} Submission`,
-              municipality: muni,
-              reportingPeriod: p,
-              monthYear: p,
-              rows: fd.rows || [],
-              totals: fd.totals || {},
-              visitors: item.visitors || fd.totals?.grandTotal || fd.totalGuests || 0,
-              status: item.status || 'Submitted to Province',
-              submittedBy: item.sender || `${muni} Municipal Tourism Office`,
-              submittedAt: item.date || item.submittedAt || item.createdAt || new Date().toISOString(),
-              formData: fd,
-            });
-          }
+    if (isMuniReport) {
+      const fd = item.formData || {};
+      const muni = item.municipality || fd.municipality || 'BAYOMBONG';
+      const p = fd.monthYear || fd.reportingPeriod || item.details?.reportingPeriod || 'Nov-26';
+      const existing = docs.find(
+        (d) =>
+          d.formType === (item.formType || 'VAR 2') &&
+          d.municipality?.toUpperCase() === muni.toUpperCase() &&
+          (d.reportingPeriod === p || d.monthYear === p)
+      );
+      if (existing) {
+        if (isRawStatusApproved(item.status, item.isLocked)) {
+          existing.status = 'Approved';
+          existing.isLocked = true;
+        } else if (isRawStatusRevisedOrRejected(item.status)) {
+          existing.status = 'Needs Revision';
         }
-      });
+      } else {
+        docs.push({
+          id: item.id || item._id,
+          formId: item.id || item._id,
+          formType: item.formType || 'VAR 2',
+          title: item.subject || `${item.formType} Submission`,
+          municipality: muni,
+          reportingPeriod: p,
+          monthYear: p,
+          rows: fd.rows || [],
+          totals: fd.totals || {},
+          visitors: item.visitors || fd.totals?.grandTotal || fd.totalGuests || 0,
+          status: item.status || 'Submitted to Province',
+          isLocked: Boolean(item.isLocked),
+          submittedBy: item.sender || `${muni} Municipal Tourism Office`,
+          submittedAt: item.date || item.submittedAt || item.createdAt || new Date().toISOString(),
+          formData: fd,
+        });
+      }
     }
-  } catch {}
+  });
 
   // Fallback: specifically fetch Bayombong Nov-26 VAR 2
   try {
@@ -162,9 +307,38 @@ export async function fetchAllMunicipalSubmissions() {
     }
   } catch {}
 
+  // Strictly resolve approval status on every document
+  const enrichedDocs = docs.map((doc) => {
+    const docKeys = buildSubmissionApprovalKeys(doc);
+    const idCandidates = [doc.id, doc.formId, doc.parentId].filter(Boolean).map((x) => String(x).trim());
+
+    const explicitlyApproved =
+      isRawStatusApproved(doc.status, doc.isLocked) ||
+      isRawStatusApproved(doc.formData?.status, doc.formData?.isLocked) ||
+      idCandidates.some((id) => approvedIds.has(id)) ||
+      docKeys.some((k) => approvedKeys.has(k));
+
+    const explicitlyRevised =
+      isRawStatusRevisedOrRejected(doc.status) ||
+      (!explicitlyApproved && docKeys.some((k) => revisedKeys.has(k)));
+
+    const isApproved = Boolean(explicitlyApproved && !explicitlyRevised);
+    const normalizedStatus = isApproved
+      ? 'Approved'
+      : explicitlyRevised
+      ? 'Needs Revision'
+      : 'Pending Approval';
+
+    return {
+      ...doc,
+      isApproved,
+      status: normalizedStatus,
+    };
+  });
+
   // Deduplicate and sort newest first
-  docs.sort((a, b) => new Date(b.submittedAt || 0) - new Date(a.submittedAt || 0));
-  return docs;
+  enrichedDocs.sort((a, b) => new Date(b.submittedAt || 0) - new Date(a.submittedAt || 0));
+  return enrichedDocs;
 }
 
 
@@ -387,38 +561,59 @@ function MonthlyYearlyAttractionsForm({ onNotify, onRegisterExport }) {
   });
 
   const [establishments, setEstablishments] = useState([]);
+  const establishmentsRef = useRef([]);
+  const manualEditsRef = useRef({});
   const [customAttractions, setCustomAttractions] = useState({});
   const [addingToMuni, setAddingToMuni] = useState(null);
   const [newAttractionName, setNewAttractionName] = useState('');
+  const [approvalStats, setApprovalStats] = useState({ approvedCount: 0, pendingCount: 0 });
 
-  // Cell Data Store: { [`${rowKey}__${mIdx}`]: { tpM, tpF, opM, opF, fM, fF } }
-  const [dataStore, setDataStore] = useState(() => ({
+  const BASELINE_DATA = {
     'BAYOMBONG__Zen Hotel Bayombong__9': { tpM: 1020, tpF: 980, opM: 1600, opF: 1565, fM: 7, fF: 10 },
     'BAYOMBONG__Zen Hotel__9': { tpM: 1020, tpF: 980, opM: 1600, opF: 1565, fM: 7, fF: 10 },
     'BAYOMBONG__WILWIN HOTEL__9': { tpM: 100, tpF: 110, opM: 100, opF: 100, fM: 0, fF: 0 },
     'BAYOMBONG__Wilwin Hotel__9': { tpM: 100, tpF: 110, opM: 100, opF: 100, fM: 0, fF: 0 },
-  }));
+  };
+
+  // Cell Data Store: { [`${rowKey}__${mIdx}`]: { tpM, tpF, opM, opF, fM, fF } }
+  const [dataStore, setDataStore] = useState(() => ({ ...BASELINE_DATA }));
   // Attraction Codes: { [rowKey]: codeString }
   const [codes, setCodes] = useState({});
 
   // View Mode: 'all' (Spreadsheet Scroll) or month index 0..11 for single-month focus
   const [viewMode, setViewMode] = useState('all');
 
-  // Load registered establishments in real-time
+  // Load registered establishments & STRICTLY APPROVED municipal submissions in real-time
   useEffect(() => {
     let isMounted = true;
-    const loadEsts = () => {
-      fetchEstablishments().then((data) => {
+    const loadEsts = async () => {
+      try {
+        const data = await fetchEstablishments();
         if (isMounted && Array.isArray(data)) {
+          establishmentsRef.current = data;
           setEstablishments(data);
         }
-      });
+        return Array.isArray(data) ? data : [];
+      } catch {
+        return establishmentsRef.current;
+      }
     };
-    loadEsts();
 
-    const loadSubmittedForms = async () => {
+    const loadSubmittedForms = async (overrideEsts) => {
       try {
+        const estList = Array.isArray(overrideEsts) && overrideEsts.length > 0 ? overrideEsts : establishmentsRef.current;
         const docs = await fetchAllMunicipalSubmissions();
+
+        // STRICT APPROVAL GATE: Only Provincial-Approved submissions enter the official Provincial Form
+        const approvedDocs = docs.filter((doc) => doc.isApproved === true);
+        const pendingDocs = docs.filter((doc) => !doc.isApproved);
+
+        if (isMounted) {
+          setApprovalStats({
+            approvedCount: approvedDocs.length,
+            pendingCount: pendingDocs.length,
+          });
+        }
 
         const monthMap = {
           jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
@@ -430,7 +625,7 @@ function MonthlyYearlyAttractionsForm({ onNotify, onRegisterExport }) {
         const incomingData = {};
         const incomingCodes = {};
 
-        docs.forEach((doc) => {
+        approvedDocs.forEach((doc) => {
           const p = String(doc.monthYear || doc.reportingPeriod || '').toLowerCase();
           let mIdx = -1;
           for (const [k, v] of Object.entries(monthMap)) {
@@ -461,7 +656,7 @@ function MonthlyYearlyAttractionsForm({ onNotify, onRegisterExport }) {
             incomingData[`${matchedMuni}__${rName}__${mIdx}`] = { tpM, tpF, opM, opF, fM, fF };
             if (r.code) incomingCodes[`${matchedMuni}__${rName}`] = r.code;
 
-            establishments.forEach((est) => {
+            estList.forEach((est) => {
               const estName = est.name || est.establishmentName;
               if (cleanStr(estName) === cleanStr(rName) || cleanStr(estName).includes(cleanStr(rName)) || cleanStr(rName).includes(cleanStr(estName))) {
                 incomingData[`${matchedMuni}__${estName}__${mIdx}`] = { tpM, tpF, opM, opF, fM, fF };
@@ -471,22 +666,23 @@ function MonthlyYearlyAttractionsForm({ onNotify, onRegisterExport }) {
           });
         });
 
-        if (isMounted && Object.keys(incomingData).length > 0) {
-          setDataStore((prev) => ({
+        if (isMounted) {
+          setDataStore({
+            ...BASELINE_DATA,
             ...incomingData,
-            ...prev,
-          }));
+            ...manualEditsRef.current,
+          });
           setCodes((prev) => ({
             ...incomingCodes,
             ...prev,
           }));
         }
       } catch (err) {
-        console.warn('Error loading submitted forms into spreadsheet:', err);
+        console.warn('Error loading approved forms into spreadsheet:', err);
       }
     };
 
-    loadSubmittedForms();
+    loadEsts().then((loadedEsts) => loadSubmittedForms(loadedEsts));
 
     let channel = null;
     if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
@@ -495,27 +691,46 @@ function MonthlyYearlyAttractionsForm({ onNotify, onRegisterExport }) {
         channel.onmessage = (event) => {
           const type = event.data?.type;
           if (
+            type === 'submission:approved' ||
+            type === 'submission:revised' ||
+            type === 'inbox:updated' ||
             type === 'establishment:registered' ||
             type === 'establishment:new' ||
             type === 'establishment:updated' ||
-            type === 'data:updated' ||
-            type?.includes('var2') ||
-            type?.includes('submission')
+            type === 'data:updated'
           ) {
-            loadEsts();
-            loadSubmittedForms();
+            loadEsts().then((loadedEsts) => loadSubmittedForms(loadedEsts));
+            if (type === 'submission:approved' && onNotify) {
+              const m = event.data?.municipality || 'Municipality';
+              onNotify(`✅ Na-approve ang ulat ng ${m}: Awtomatikong naipasok na sa Provincial Form!`);
+            }
           }
         };
       } catch {}
     }
 
-    const interval = setInterval(loadEsts, 5000);
+    const handleStorageSync = (e) => {
+      if (
+        e.key === 'turismotrack_approved_submissions' ||
+        e.key === 'turismotrack_approved_form_keys' ||
+        e.key === 'turismotrack_revised_form_keys' ||
+        e.key === 'turismotrack_inbox_items'
+      ) {
+        loadSubmittedForms();
+      }
+    };
+    window.addEventListener('storage', handleStorageSync);
+
+    const interval = setInterval(() => {
+      loadEsts().then((loadedEsts) => loadSubmittedForms(loadedEsts));
+    }, 8000);
     return () => {
       isMounted = false;
       if (channel) channel.close();
+      window.removeEventListener('storage', handleStorageSync);
       clearInterval(interval);
     };
-  }, []);
+  }, [onNotify]);
 
   // Dynamically group registered establishments and custom attractions under the 15 municipalities
   const municipalGroups = useMemo(() => {
@@ -592,13 +807,18 @@ function MonthlyYearlyAttractionsForm({ onNotify, onRegisterExport }) {
 
   const handleCellChange = (rowKey, mIdx, field, val) => {
     const key = `${rowKey}__${mIdx}`;
-    setDataStore((prev) => ({
-      ...prev,
-      [key]: {
+    const parsed = val === '' ? '' : Math.max(0, Number(val) || 0);
+    setDataStore((prev) => {
+      const updatedCell = {
         ...(prev[key] || {}),
-        [field]: val === '' ? '' : Math.max(0, Number(val) || 0)
-      }
-    }));
+        [field]: parsed
+      };
+      manualEditsRef.current[key] = updatedCell;
+      return {
+        ...prev,
+        [key]: updatedCell
+      };
+    });
   };
 
   const handleCodeChange = (rowKey, val) => {
@@ -610,6 +830,7 @@ function MonthlyYearlyAttractionsForm({ onNotify, onRegisterExport }) {
 
   const handleClearAll = () => {
     if (window.confirm('Sigurado po ba kayong nais burahin ang lahat ng inilagay na data sa spreadsheet?')) {
+      manualEditsRef.current = {};
       setDataStore({});
       setCodes({});
       setMeta({ preparedBy: '' });
@@ -810,6 +1031,40 @@ function MonthlyYearlyAttractionsForm({ onNotify, onRegisterExport }) {
         <p className="tf-sheet-subtitle" style={{ fontStyle: 'italic', color: '#1e3a8a', marginTop: '4px' }}>
           Type only in the blue cells (Male / Female). Black cells are formulas. Scroll right for the next months; the YEARLY TOTAL is the last block.
         </p>
+        <div
+          className="no-print"
+          style={{
+            marginTop: '10px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '10px',
+            flexWrap: 'wrap',
+            padding: '7px 12px',
+            borderRadius: '8px',
+            backgroundColor: '#f0fdf4',
+            border: '1px solid #86efac',
+            fontSize: '12px',
+            color: '#166534',
+            fontWeight: 600,
+          }}
+        >
+          <span>🔒 Approval-Gated Sync: Tanging <strong>Approved</strong> na municipal reports mula sa Inbox ang pumapasok dito ({approvalStats.approvedCount} approved).</span>
+          {approvalStats.pendingCount > 0 && (
+            <span
+              style={{
+                backgroundColor: '#fef3c7',
+                color: '#92400e',
+                border: '1px solid #fcd34d',
+                padding: '2px 8px',
+                borderRadius: '999px',
+                fontSize: '11px',
+                fontWeight: 700,
+              }}
+            >
+              ⏳ {approvalStats.pendingCount} pending sa Inbox (hindi pa nakapasok)
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Instruction & Legend Banner */}
@@ -1479,21 +1734,37 @@ function ProvincialLGUForm({ onNotify, onRegisterExport }) {
     'VILLAVERDE'
   ], []);
 
-  // Default dataStore populated with consolidated municipal reports
-  const [dataStore, setDataStore] = useState(() => {
-    return {
-      9: { // October baseline (Month index 9)
-        'BAYOMBONG': { d: 5550, f: 42 }
-      }
-    };
-  });
+  const BASELINE_LGU_DATA = {
+    9: { // October baseline (Month index 9)
+      'BAYOMBONG': { d: 5550, f: 42 }
+    }
+  };
 
-  // Load and listen to realtime municipal submissions
+  const manualEditsRef = useRef({});
+  const [approvalStats, setApprovalStats] = useState({ approvedCount: 0, pendingCount: 0 });
+
+  // Default dataStore populated with consolidated APPROVED municipal reports + October baseline
+  const [dataStore, setDataStore] = useState(() => ({
+    9: { 'BAYOMBONG': { d: 5550, f: 42 } }
+  }));
+
+  // Load and listen ONLY to APPROVED municipal submissions
   useEffect(() => {
     let isMounted = true;
     const loadMuniData = async () => {
       try {
         const docs = await fetchAllMunicipalSubmissions();
+
+        // STRICT APPROVAL GATE: Only Provincial-Approved submissions enter this Provincial Form
+        const approvedDocs = docs.filter((doc) => doc.isApproved === true);
+        const pendingDocs = docs.filter((doc) => !doc.isApproved);
+
+        if (isMounted) {
+          setApprovalStats({
+            approvedCount: approvedDocs.length,
+            pendingCount: pendingDocs.length,
+          });
+        }
 
         const monthMap = {
           jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
@@ -1501,7 +1772,7 @@ function ProvincialLGUForm({ onNotify, onRegisterExport }) {
         };
 
         const incoming = {};
-        docs.forEach((doc) => {
+        approvedDocs.forEach((doc) => {
           const p = String(doc.monthYear || doc.reportingPeriod || '').toLowerCase();
           let mIdx = -1;
           for (const [k, v] of Object.entries(monthMap)) {
@@ -1528,24 +1799,31 @@ function ProvincialLGUForm({ onNotify, onRegisterExport }) {
           incoming[mIdx][muni].f += fVal;
         });
 
-        if (isMounted && Object.keys(incoming).length > 0) {
-          setDataStore((prev) => {
-            const next = { ...prev };
-            Object.entries(incoming).forEach(([mIdx, muniObj]) => {
-              if (!next[mIdx]) next[mIdx] = {};
-              Object.entries(muniObj).forEach(([muni, counts]) => {
-                if (Number(mIdx) === 9 && muni === 'BAYOMBONG' && counts.d === 0) {
-                  next[mIdx][muni] = { d: 5550, f: 42 };
-                } else if (counts.d > 0 || counts.f > 0) {
-                  next[mIdx][muni] = counts;
-                }
-              });
+        if (isMounted) {
+          const next = {
+            9: { 'BAYOMBONG': { d: 5550, f: 42 } }
+          };
+          Object.entries(incoming).forEach(([mIdx, muniObj]) => {
+            if (!next[mIdx]) next[mIdx] = {};
+            Object.entries(muniObj).forEach(([muni, counts]) => {
+              if (Number(mIdx) === 9 && muni === 'BAYOMBONG' && counts.d === 0) {
+                next[mIdx][muni] = { d: 5550, f: 42 };
+              } else if (counts.d > 0 || counts.f > 0) {
+                next[mIdx][muni] = counts;
+              }
             });
-            return next;
           });
+          // Re-apply any manual edits typed directly by the Provincial Officer
+          Object.entries(manualEditsRef.current).forEach(([mIdx, muniObj]) => {
+            if (!next[mIdx]) next[mIdx] = {};
+            Object.entries(muniObj).forEach(([muni, counts]) => {
+              next[mIdx][muni] = { ...(next[mIdx][muni] || {}), ...counts };
+            });
+          });
+          setDataStore(next);
         }
       } catch (err) {
-        console.warn('Error loading muni report data:', err);
+        console.warn('Error loading approved muni report data:', err);
       }
     };
 
@@ -1557,27 +1835,40 @@ function ProvincialLGUForm({ onNotify, onRegisterExport }) {
         ch = new BroadcastChannel('turismotrack_realtime');
         ch.onmessage = (event) => {
           const type = event.data?.type;
-          if (type?.includes('var2') || type?.includes('submission') || type?.includes('report')) {
-            const muni = String(event.data?.municipality || '').toUpperCase().trim();
-            const monthIdx = event.data?.monthIdx ?? (new Date().getMonth());
-            const dCount = Number(event.data?.domesticCount || event.data?.localVisitors || 0);
-            const fCount = Number(event.data?.foreignCount || event.data?.foreignVisitors || 0);
-            if (muni && (dCount > 0 || fCount > 0)) {
-              setDataStore((prev) => ({
-                ...prev,
-                [monthIdx]: {
-                  ...(prev[monthIdx] || {}),
-                  [muni]: { d: dCount, f: fCount }
-                }
-              }));
-              if (onNotify) onNotify(`⚡ Bagong ulat mula sa ${muni}: Awtomatikong naipasok sa form!`);
+          if (
+            type === 'submission:approved' ||
+            type === 'submission:revised' ||
+            type === 'inbox:updated' ||
+            type === 'data:updated'
+          ) {
+            loadMuniData();
+            if (type === 'submission:approved' && onNotify) {
+              const muni = String(event.data?.municipality || 'Municipality').toUpperCase().trim();
+              onNotify(`✅ Na-approve ang ulat mula sa ${muni}: Awtomatikong naipasok na sa Provincial Form!`);
             }
           }
         };
       } catch {}
     }
+
+    const handleStorageSync = (e) => {
+      if (
+        e.key === 'turismotrack_approved_submissions' ||
+        e.key === 'turismotrack_approved_form_keys' ||
+        e.key === 'turismotrack_revised_form_keys' ||
+        e.key === 'turismotrack_inbox_items'
+      ) {
+        loadMuniData();
+      }
+    };
+    window.addEventListener('storage', handleStorageSync);
+
+    const interval = setInterval(loadMuniData, 8000);
     return () => {
+      isMounted = false;
       if (ch) ch.close();
+      window.removeEventListener('storage', handleStorageSync);
+      clearInterval(interval);
     };
   }, [onNotify]);
 
@@ -1593,6 +1884,11 @@ function ProvincialLGUForm({ onNotify, onRegisterExport }) {
   }, [municipalities, dataStore, meta, onRegisterExport]);
 
   const handleCellChange = (mIdx, muni, field, val) => {
+    if (!manualEditsRef.current[mIdx]) manualEditsRef.current[mIdx] = {};
+    manualEditsRef.current[mIdx][muni] = {
+      ...(manualEditsRef.current[mIdx][muni] || {}),
+      [field]: val
+    };
     setDataStore((prev) => {
       const monthData = prev[mIdx] || {};
       const muniData = monthData[muni] || {};
@@ -1610,6 +1906,7 @@ function ProvincialLGUForm({ onNotify, onRegisterExport }) {
   };
 
   const handleClearAllData = () => {
+    manualEditsRef.current = {};
     setMeta({
       province: 'NUEVA VIZCAYA',
       period: '',
@@ -1651,6 +1948,40 @@ function ProvincialLGUForm({ onNotify, onRegisterExport }) {
               placeholder=""
             />
           </div>
+        </div>
+        <div
+          className="no-print"
+          style={{
+            marginTop: '10px',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '10px',
+            flexWrap: 'wrap',
+            padding: '7px 12px',
+            borderRadius: '8px',
+            backgroundColor: '#f0fdf4',
+            border: '1px solid #86efac',
+            fontSize: '12px',
+            color: '#166534',
+            fontWeight: 600,
+          }}
+        >
+          <span>🔒 Approval-Gated Sync: Tanging <strong>Approved</strong> na municipal submissions mula sa Inbox ang pumapasok dito ({approvalStats.approvedCount} approved).</span>
+          {approvalStats.pendingCount > 0 && (
+            <span
+              style={{
+                backgroundColor: '#fef3c7',
+                color: '#92400e',
+                border: '1px solid #fcd34d',
+                padding: '2px 8px',
+                borderRadius: '999px',
+                fontSize: '11px',
+                fontWeight: 700,
+              }}
+            >
+              ⏳ {approvalStats.pendingCount} pending sa Inbox (hindi pa nakapasok)
+            </span>
+          )}
         </div>
       </div>
 
@@ -1856,6 +2187,8 @@ function MunicipalSubmissionsView({ onNotify, onCountChange, onRegisterExport })
         const local = JSON.parse(localStorage.getItem('turismotrack_inbox_items') || '[]');
         local.forEach((item) => {
           if (!data.some((d) => d.id === item.id || d.formId === item.id)) {
+            const approved = isRawStatusApproved(item.status, item.isLocked);
+            const revised = isRawStatusRevisedOrRejected(item.status);
             data.unshift({
               id: item.id,
               formType: item.formType || 'VAR 2',
@@ -1864,7 +2197,8 @@ function MunicipalSubmissionsView({ onNotify, onCountChange, onRegisterExport })
               province: 'NUEVA VIZCAYA',
               reportingPeriod: item.details?.reportingPeriod || item.formData?.monthYear || '2026',
               monthYear: item.formData?.monthYear || '2026',
-              status: item.status === 'pending' ? 'Submitted to Province' : item.status,
+              isApproved: approved && !revised,
+              status: approved && !revised ? 'Approved' : revised ? 'Needs Revision' : 'Pending Approval',
               submittedBy: item.sender || 'Municipal Tourism Office',
               submittedAt: item.date || new Date().toISOString(),
               visitors: item.details?.totalVisitors || item.formData?.grandTotal || 0,
@@ -2054,9 +2388,40 @@ function MunicipalSubmissionsView({ onNotify, onCountChange, onRegisterExport })
                       {sub.submittedAt ? new Date(sub.submittedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
                     </td>
                     <td>
-                      <span className="tf-status-badge">
-                        ● {sub.status || 'Submitted to Province'}
-                      </span>
+                      {sub.isApproved ? (
+                        <span
+                          className="tf-status-badge"
+                          style={{
+                            backgroundColor: '#dcfce7',
+                            color: '#166534',
+                            border: '1px solid #86efac',
+                          }}
+                        >
+                          ✅ Approved (Nasa Provincial Form)
+                        </span>
+                      ) : String(sub.status || '').toLowerCase().includes('revision') ? (
+                        <span
+                          className="tf-status-badge"
+                          style={{
+                            backgroundColor: '#fee2e2',
+                            color: '#991b1b',
+                            border: '1px solid #fca5a5',
+                          }}
+                        >
+                          ⚠️ Needs Revision
+                        </span>
+                      ) : (
+                        <span
+                          className="tf-status-badge"
+                          style={{
+                            backgroundColor: '#fef3c7',
+                            color: '#92400e',
+                            border: '1px solid #fcd34d',
+                          }}
+                        >
+                          ⏳ Pending Approval (I-approve sa Inbox)
+                        </span>
+                      )}
                     </td>
                     <td style={{ textAlign: 'center' }}>
                       <button

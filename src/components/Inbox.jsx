@@ -308,10 +308,81 @@ export default function Inbox({ user: _user }) {
     });
   }, [messages, activeTab, formTypeFilter, searchQuery]);
 
+  // Helper: Build normalized keys for cross-referencing Inbox approvals with Provincial Forms
+  const buildApprovalKeys = (item) => {
+    if (!item) return [];
+    const keys = [];
+    const clean = (s) =>
+      String(s || '')
+        .toUpperCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^A-Z0-9]/g, '');
+
+    const rawId = String(item.id || item._id || '').trim();
+    if (rawId) keys.push(`ID__${rawId}`);
+    if (item.parentId) keys.push(`ID__${String(item.parentId).trim()}`);
+    if (item.formId) keys.push(`ID__${String(item.formId).trim()}`);
+
+    const muni = clean(item.municipality || item.formData?.municipality || '');
+    const rawType = clean(item.formType || item.formData?.formType || '');
+    const formKind = rawType.includes('VAR2')
+      ? 'VAR2'
+      : rawType.includes('DAE2')
+      ? 'DAE2'
+      : rawType.includes('DOT')
+      ? 'DOT'
+      : rawType.includes('CUS')
+      ? 'CUS'
+      : rawType || 'REPORT';
+
+    const periodText = String(
+      item.formData?.monthYear ||
+        item.formData?.reportingPeriod ||
+        item.details?.reportingPeriod ||
+        item.reportingPeriod ||
+        item.subject ||
+        ''
+    ).toLowerCase();
+
+    const monthMap = {
+      jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+      jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11,
+    };
+    let mIdx = -1;
+    for (const [k, v] of Object.entries(monthMap)) {
+      if (periodText.includes(k)) {
+        mIdx = v;
+        break;
+      }
+    }
+
+    if (muni && mIdx !== -1) {
+      keys.push(`${muni}__${formKind}__M${mIdx}`);
+      if (formKind === 'VAR2' || formKind === 'DAE2' || formKind === 'REPORT') {
+        keys.push(`${muni}__M${mIdx}`);
+      }
+    }
+    const cleanPeriod = clean(item.formData?.monthYear || item.formData?.reportingPeriod || item.details?.reportingPeriod || '');
+    if (muni && cleanPeriod) {
+      keys.push(`${muni}__${formKind}__${cleanPeriod}`);
+    }
+    return Array.from(new Set(keys));
+  };
+
   // Actions
   const handleApprove = (id, e) => {
     if (e) e.stopPropagation();
     const cleanId = String(id || '').trim();
+    const targetItem = messages.find((m) => String(m.id) === cleanId) || selectedItem;
+    const itemKeys = buildApprovalKeys(targetItem);
+    const approvalPayload = {
+      action: 'approve',
+      remarks: 'Approved by Provincial Tourism Officer (PTCO)',
+      municipality: targetItem?.municipality || targetItem?.formData?.municipality || '',
+      formType: targetItem?.formType || targetItem?.formData?.formType || '',
+      monthYear: targetItem?.formData?.monthYear || targetItem?.formData?.reportingPeriod || targetItem?.details?.reportingPeriod || '',
+    };
 
     // 1. Call backend APIs to mark submission approved & locked
     fetch(`${API_BASE_URL}/inbox/${cleanId}/action`, {
@@ -323,7 +394,7 @@ export default function Inbox({ user: _user }) {
         'x-user-id': 'provincial-ptco',
         'x-user-name': 'Provincial Tourism Officer',
       },
-      body: JSON.stringify({ action: 'approve', remarks: 'Approved by Provincial Tourism Officer (PTCO)' }),
+      body: JSON.stringify(approvalPayload),
     }).catch(() => {});
 
     fetch(`${API_BASE_URL}/submissions/${cleanId}/action`, {
@@ -335,7 +406,7 @@ export default function Inbox({ user: _user }) {
         'x-user-id': 'provincial-ptco',
         'x-user-name': 'Provincial Tourism Officer',
       },
-      body: JSON.stringify({ action: 'approve', remarks: 'Approved by Provincial Tourism Officer (PTCO)' }),
+      body: JSON.stringify(approvalPayload),
     }).catch(() => {});
 
     fetch(`${API_BASE_URL}/inbox/${cleanId}/approve`, {
@@ -344,24 +415,48 @@ export default function Inbox({ user: _user }) {
         'Content-Type': 'application/json',
         'x-user-role': 'provincial',
       },
-      body: JSON.stringify({ action: 'approve' }),
+      body: JSON.stringify(approvalPayload),
     }).catch(() => {});
 
-    // 2. Persist in approved submissions storage so polling never reverts it
+    // 2. Persist in approved submissions storage so polling never reverts it & Provincial Forms immediately unlock it
     try {
       const approvedSubs = JSON.parse(localStorage.getItem('turismotrack_approved_submissions') || '[]');
       if (cleanId && !approvedSubs.includes(cleanId)) {
         approvedSubs.push(cleanId);
         localStorage.setItem('turismotrack_approved_submissions', JSON.stringify(approvedSubs));
       }
+
+      const approvedKeys = JSON.parse(localStorage.getItem('turismotrack_approved_form_keys') || '[]');
+      const nextApprovedKeys = Array.from(new Set([...approvedKeys, ...itemKeys]));
+      localStorage.setItem('turismotrack_approved_form_keys', JSON.stringify(nextApprovedKeys));
+
+      const revisedKeys = JSON.parse(localStorage.getItem('turismotrack_revised_form_keys') || '[]');
+      const nextRevisedKeys = revisedKeys.filter((k) => !itemKeys.includes(k));
+      localStorage.setItem('turismotrack_revised_form_keys', JSON.stringify(nextRevisedKeys));
     } catch {}
 
-    // 3. Update local state
+    // 3. Broadcast realtime approval event to Provincial Forms
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const ch = new BroadcastChannel('turismotrack_realtime');
+        ch.postMessage({
+          type: 'submission:approved',
+          id: cleanId,
+          municipality: approvalPayload.municipality,
+          formType: approvalPayload.formType,
+          monthYear: approvalPayload.monthYear,
+          approvedAt: new Date().toISOString(),
+        });
+        ch.close();
+      }
+    } catch {}
+
+    // 4. Update local state
     const updated = messages.map((m) =>
       String(m.id) === cleanId ? { ...m, status: 'approved', isLocked: true, unread: false } : m
     );
     updateMessages(updated);
-    showToast('Submission approved & locked for official records.');
+    showToast('Submission approved & locked — awtomatiko nang naipasok sa Official Provincial Forms.');
     if (String(selectedItem?.id) === cleanId) {
       setSelectedItem((prev) => (prev ? { ...prev, status: 'approved', isLocked: true } : null));
     }
@@ -370,11 +465,21 @@ export default function Inbox({ user: _user }) {
   const handleReturnRevision = (id, e) => {
     if (e) e.stopPropagation();
     const cleanId = String(id || '').trim();
+    const targetItem = messages.find((m) => String(m.id) === cleanId) || selectedItem;
+    const itemKeys = buildApprovalKeys(targetItem);
     const reason = window.prompt(
       'Enter audit notes or required corrections for this filing:',
       'Please verify foreign visitor breakdowns and resubmit.'
     );
     if (reason === null) return;
+
+    const revisionPayload = {
+      action: 'needs_revision',
+      remarks: reason,
+      municipality: targetItem?.municipality || targetItem?.formData?.municipality || '',
+      formType: targetItem?.formType || targetItem?.formData?.formType || '',
+      monthYear: targetItem?.formData?.monthYear || targetItem?.formData?.reportingPeriod || targetItem?.details?.reportingPeriod || '',
+    };
 
     fetch(`${API_BASE_URL}/inbox/${cleanId}/action`, {
       method: 'POST',
@@ -385,7 +490,7 @@ export default function Inbox({ user: _user }) {
         'x-user-id': 'provincial-ptco',
         'x-user-name': 'Provincial Tourism Officer',
       },
-      body: JSON.stringify({ action: 'needs_revision', remarks: reason }),
+      body: JSON.stringify(revisionPayload),
     }).catch(() => {});
 
     fetch(`${API_BASE_URL}/submissions/${cleanId}/action`, {
@@ -397,13 +502,35 @@ export default function Inbox({ user: _user }) {
         'x-user-id': 'provincial-ptco',
         'x-user-name': 'Provincial Tourism Officer',
       },
-      body: JSON.stringify({ action: 'needs_revision', remarks: reason }),
+      body: JSON.stringify(revisionPayload),
     }).catch(() => {});
 
     try {
       const approvedSubs = JSON.parse(localStorage.getItem('turismotrack_approved_submissions') || '[]');
       const filtered = approvedSubs.filter((sid) => sid !== cleanId);
       localStorage.setItem('turismotrack_approved_submissions', JSON.stringify(filtered));
+
+      const approvedKeys = JSON.parse(localStorage.getItem('turismotrack_approved_form_keys') || '[]');
+      const nextApprovedKeys = approvedKeys.filter((k) => !itemKeys.includes(k));
+      localStorage.setItem('turismotrack_approved_form_keys', JSON.stringify(nextApprovedKeys));
+
+      const revisedKeys = JSON.parse(localStorage.getItem('turismotrack_revised_form_keys') || '[]');
+      const nextRevisedKeys = Array.from(new Set([...revisedKeys, ...itemKeys]));
+      localStorage.setItem('turismotrack_revised_form_keys', JSON.stringify(nextRevisedKeys));
+    } catch {}
+
+    try {
+      if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        const ch = new BroadcastChannel('turismotrack_realtime');
+        ch.postMessage({
+          type: 'submission:revised',
+          id: cleanId,
+          municipality: revisionPayload.municipality,
+          formType: revisionPayload.formType,
+          monthYear: revisionPayload.monthYear,
+        });
+        ch.close();
+      }
     } catch {}
 
     const updated = messages.map((m) =>
@@ -417,7 +544,7 @@ export default function Inbox({ user: _user }) {
         : m
     );
     updateMessages(updated);
-    showToast('Filing returned to municipality for revision.');
+    showToast('Filing returned to municipality for revision (excluded from Provincial Forms).');
     if (String(selectedItem?.id) === cleanId) {
       setSelectedItem((prev) => (prev ? { ...prev, status: 'needs-revision', revisionReason: reason, isLocked: false } : null));
     }
