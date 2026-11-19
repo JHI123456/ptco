@@ -365,20 +365,22 @@
           </div>
 
           {/* Right Filter groups */}
-          <div className="lgu-filters-row">
+          <div className="lgu-filters-cluster">
             {/* District Pills */}
-            <div className="lgu-district-pills">
+            <div className="lgu-filter-group">
               <span className="lgu-filter-label">District:</span>
-              {["All", "North", "Central", "South"].map((dist) => (
-                <button
-                  key={dist}
-                  type="button"
-                  className={`district-pill ${selectedDistrict === dist ? "active" : ""}`}
-                  onClick={() => setSelectedDistrict(dist)}
-                >
-                  {dist}
-                </button>
-              ))}
+              <div className="lgu-pill-group">
+                {["All", "North", "Central", "South"].map((dist) => (
+                  <button
+                    key={dist}
+                    type="button"
+                    className={`lgu-pill-btn ${selectedDistrict === dist ? "active" : ""}`}
+                    onClick={() => setSelectedDistrict(dist)}
+                  >
+                    {dist}
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div className="lgu-filter-separator" />
