@@ -1105,3 +1105,216 @@
         gap: 4px;
     }
 }
+
+
+/* =========================================================
+   TERMS OF SERVICE & PRIVACY POLICY MODAL
+   ========================================================= */
+.legal-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background-color: rgba(15, 23, 42, 0.68);
+    backdrop-filter: blur(5px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999;
+    padding: 16px;
+    animation: fadeIn 0.2s ease-out;
+}
+
+.legal-modal-card {
+    background-color: #ffffff;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 680px;
+    max-height: 88vh;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: slideUp 0.25s ease-out;
+    border: 1px solid #e2e8f0;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(16px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.legal-modal-header {
+    padding: 18px 24px;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: #f8fafc;
+}
+
+.legal-modal-title-group h3 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 800;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.legal-modal-title-group p {
+    margin: 3px 0 0 0;
+    font-size: 12px;
+    color: #64748b;
+}
+
+.legal-modal-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+    line-height: 1;
+    transition: all 0.15s;
+}
+
+.legal-modal-close:hover {
+    background-color: #fee2e2;
+    color: #ef4444;
+}
+
+.legal-modal-nav {
+    display: flex;
+    gap: 8px;
+    padding: 12px 24px;
+    background-color: #ffffff;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.legal-modal-tab-btn {
+    flex: 1;
+    padding: 9px 14px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    background-color: #f8fafc;
+    font-size: 13px;
+    font-weight: 700;
+    color: #475569;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: all 0.15s ease;
+}
+
+.legal-modal-tab-btn:hover {
+    background-color: #f1f5f9;
+    color: #0f172a;
+}
+
+.legal-modal-tab-btn.active {
+    background-color: #fff7ed;
+    color: #c2410c;
+    border-color: #ea580c;
+    box-shadow: 0 1px 3px rgba(234, 88, 12, 0.12);
+}
+
+.legal-modal-body {
+    padding: 20px 24px;
+    overflow-y: auto;
+    max-height: 56vh;
+    font-size: 13.5px;
+    line-height: 1.65;
+    color: #334155;
+}
+
+.legal-modal-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background-color: #f0fdf4;
+    border: 1px solid #86efac;
+    color: #166534;
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 999px;
+    margin-bottom: 14px;
+}
+
+.legal-section {
+    margin-bottom: 18px;
+}
+
+.legal-section h4 {
+    margin: 0 0 6px 0;
+    font-size: 14px;
+    font-weight: 750;
+    color: #0f172a;
+}
+
+.legal-section p {
+    margin: 0 0 8px 0;
+    color: #475569;
+}
+
+.legal-section ul {
+    margin: 0 0 8px 0;
+    padding-left: 20px;
+    color: #475569;
+}
+
+.legal-section li {
+    margin-bottom: 4px;
+}
+
+.legal-modal-footer {
+    padding: 14px 24px;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+    background-color: #f8fafc;
+}
+
+.legal-modal-btn-agree {
+    background-color: #d9531e;
+    color: #ffffff;
+    border: none;
+    padding: 9px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.15s;
+}
+
+.legal-modal-btn-agree:hover {
+    background-color: #c2410c;
+}
+
+.legal-modal-btn-close {
+    background-color: #ffffff;
+    color: #475569;
+    border: 1px solid #cbd5e1;
+    padding: 9px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.legal-modal-btn-close:hover {
+    background-color: #f1f5f9;
+    color: #0f172a;
+}

@@ -74,6 +74,184 @@ const NUEVA_VIZCAYA_MUNICIPALITIES = [
     'Villaverde',
 ];
 
+// Legal Terms of Service & Privacy Policy Modal (Data Privacy Act of 2012 / RA 10173 Compliant)
+function LegalTermsPrivacyModal({ activeTab, onSelectTab, onClose, onAgree }) {
+    return (
+        <div className="legal-modal-overlay" onClick={onClose} role="dialog" aria-modal="true">
+            <div className="legal-modal-card" onClick={(e) => e.stopPropagation()}>
+                {/* Header */}
+                <div className="legal-modal-header">
+                    <div className="legal-modal-title-group">
+                        <h3>
+                            {activeTab === 'terms' ? '📜 Terms of Service' : '🔒 Privacy Policy'}
+                        </h3>
+                        <p>TurismoTrack: Nueva Vizcaya Tourism Management &amp; Decision Support System</p>
+                    </div>
+                    <button
+                        type="button"
+                        className="legal-modal-close"
+                        onClick={onClose}
+                        title="Close"
+                        aria-label="Close"
+                    >
+                        ✕
+                    </button>
+                </div>
+
+                {/* Navigation Tabs */}
+                <div className="legal-modal-nav">
+                    <button
+                        type="button"
+                        className={`legal-modal-tab-btn ${activeTab === 'terms' ? 'active' : ''}`}
+                        onClick={() => onSelectTab('terms')}
+                    >
+                        📜 Terms of Service
+                    </button>
+                    <button
+                        type="button"
+                        className={`legal-modal-tab-btn ${activeTab === 'privacy' ? 'active' : ''}`}
+                        onClick={() => onSelectTab('privacy')}
+                    >
+                        🔒 Privacy Policy (RA 10173)
+                    </button>
+                </div>
+
+                {/* Modal Body */}
+                <div className="legal-modal-body">
+                    {activeTab === 'terms' ? (
+                        <div>
+                            <div className="legal-modal-badge">
+                                ⚖️ Official Terms of Service &amp; Administrative Governance Agreement
+                            </div>
+
+                            <div className="legal-section">
+                                <h4>1. Acceptance of Terms</h4>
+                                <p>
+                                    By registering an account, accessing, or utilizing the <strong>TurismoTrack</strong> portal (operating across Accommodation Establishments, Municipal Tourism Offices, and the Provincial Tourism and Culture Office of Nueva Vizcaya), you confirm that you have read, understood, and agreed to be legally bound by these Terms of Service.
+                                </p>
+                            </div>
+
+                            <div className="legal-section">
+                                <h4>2. Multi-Tier Registration &amp; Verification Policy</h4>
+                                <ul>
+                                    <li><strong>Accommodation Establishments:</strong> Newly registered accommodation and attraction facility accounts undergo verification and approval by their respective <strong>Municipal Tourism Officer</strong> before portal access is granted.</li>
+                                    <li><strong>Municipal Tourism Officers:</strong> Newly registered municipal accounts must be reviewed and officially activated by the <strong>Provincial Tourism and Culture Office (PTCO)</strong>.</li>
+                                    <li>Unapproved accounts remain in a strict <em>Pending Verification</em> state and cannot access administrative workspaces.</li>
+                                </ul>
+                            </div>
+
+                            <div className="legal-section">
+                                <h4>3. Authenticity &amp; Integrity of Tourist Filings</h4>
+                                <p>
+                                    All guest entries encoded via touchless QR code scanning or front-desk manual registration, as well as official monthly reporting filings (<strong>Form A / DAE 1A, DAE 1B, VAR 2, DAE-2</strong>), must reflect genuine, accurate, and verifiable guest statistics. Submitting deliberately falsified, duplicate, or inflated numbers is strictly prohibited and subject to administrative sanctions under Department of Tourism (DOT) standards.
+                                </p>
+                            </div>
+
+                            <div className="legal-section">
+                                <h4>4. Submission Locking &amp; Audit Trail Governance</h4>
+                                <p>
+                                    Upon official approval by the reviewing Municipal or Provincial Tourism Officer, compliance submissions are automatically locked (<code>isLocked</code>) to guarantee data immutability for official DOT Region II archival. If corrections are required, the filing must be formally returned for revision with documented audit notes.
+                                </p>
+                            </div>
+
+                            <div className="legal-section">
+                                <h4>5. User Responsibilities &amp; Account Security</h4>
+                                <p>
+                                    Account holders are responsible for maintaining the confidentiality of their login credentials. Any activity conducted under an authorized account is the sole responsibility of the registered organization. Users must immediately report any suspected security breach or unauthorized access to the Provincial Tourism Office.
+                                </p>
+                            </div>
+
+                            <div className="legal-section">
+                                <h4>6. Progressive Web App (PWA) Offline Operation</h4>
+                                <p>
+                                    TurismoTrack provides client-side caching to support guest logging during temporary internet disruptions. Officers and establishment personnel agree to synchronize all locally held filings as soon as internet connectivity is restored.
+                                </p>
+                            </div>
+                        </div>
+                    ) : (
+                        <div>
+                            <div className="legal-modal-badge">
+                                🛡️ Republic Act No. 10173 (Data Privacy Act of 2012) Compliant
+                            </div>
+
+                            <div className="legal-section">
+                                <h4>1. Commitment to Data Privacy</h4>
+                                <p>
+                                    <strong>TurismoTrack</strong> is committed to safeguarding personal information in strict compliance with <strong>Republic Act No. 10173 (Data Privacy Act of 2012)</strong> of the Philippines, its Implementing Rules and Regulations (IRR), and all relevant administrative issuances from the <strong>National Privacy Commission (NPC)</strong> and the <strong>Department of Tourism (DOT)</strong>.
+                                </p>
+                            </div>
+
+                            <div className="legal-section">
+                                <h4>2. Personal Data We Collect</h4>
+                                <ul>
+                                    <li><strong>Establishment &amp; Officer Details:</strong> Business name, official contact person, government email address, telephone/mobile number, DOT accreditation number, and municipal jurisdiction.</li>
+                                    <li><strong>Visitor &amp; Tourist Demographics:</strong> Collected through QR-code touchless self-check-in or manual front-desk entry: guest full name, sex/gender, age bracket, country and province/municipality of residence, purpose of visit (leisure, business, official), and length of stay.</li>
+                                </ul>
+                            </div>
+
+                            <div className="legal-section">
+                                <h4>3. Lawful Purpose of Data Processing</h4>
+                                <p>
+                                    Pursuant to Section 12 of RA 10173, collected personal information is processed strictly for public-interest and statutory tourism functions:
+                                </p>
+                                <ul>
+                                    <li>Generating official DOT Region II monthly arrivals and occupancy compliance reports.</li>
+                                    <li>Decision Support System (DSS) analytics to assess tourist influx patterns, optimize municipal resources, and guide local tourism development programs.</li>
+                                    <li>Emergency response, disaster risk management, and guest tracing during natural calamities or civil emergencies within Nueva Vizcaya.</li>
+                                </ul>
+                            </div>
+
+                            <div className="legal-section">
+                                <h4>4. Non-Disclosure &amp; Tenant Data Isolation</h4>
+                                <p>
+                                    TurismoTrack enforces strict multi-tenant boundaries. <strong>We do not sell, rent, trade, or commercially monetize guest data to third-party advertisers or private entities.</strong> Data is shared solely across sanctioned administrative channels:
+                                </p>
+                                <ul>
+                                    <li><strong>Establishments</strong> have access only to their own recorded guests.</li>
+                                    <li><strong>Municipal LGUs</strong> access consolidated records solely for establishments within their municipal border.</li>
+                                    <li><strong>The Provincial Office (PTCO)</strong> accesses macro-level consolidated statistical aggregates across all 15 municipalities.</li>
+                                </ul>
+                            </div>
+
+                            <div className="legal-section">
+                                <h4>5. Data Storage, Protection &amp; Retention</h4>
+                                <p>
+                                    All data is secured using industry-standard TLS encryption during transmission, role-based access controls (RBAC), and automated audit logs. Personal data is retained only for the duration prescribed by government and DOT audit regulations, after which individual identifiers are safely archived or anonymized for statistical reporting.
+                                </p>
+                            </div>
+
+                            <div className="legal-section">
+                                <h4>6. Your Rights Under RA 10173</h4>
+                                <p>
+                                    As a data subject, you are entitled to the <em>Right to be Informed</em>, <em>Right to Access</em>, <em>Right to Rectification</em>, and <em>Right to Erasure or Blocking</em> of false or unlawfully obtained data. Inquiries regarding data privacy may be directed to the designated Data Protection Officer at the Provincial Tourism and Culture Office (PTCO) of Nueva Vizcaya.
+                                </p>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Footer */}
+                <div className="legal-modal-footer">
+                    <button
+                        type="button"
+                        className="legal-modal-btn-close"
+                        onClick={onClose}
+                    >
+                        Close
+                    </button>
+                    <button
+                        type="button"
+                        className="legal-modal-btn-agree"
+                        onClick={onAgree}
+                    >
+                        ✓ I Understand &amp; Agree
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function Login({ onLogin }) {
     
     // Hash-based switching state: default strictly to #login on launch
@@ -125,6 +303,30 @@ export default function Login({ onLogin }) {
         return () => window.removeEventListener('hashchange', handleHashChange);
     }, []);
 
+    useEffect(() => {
+        let ch = null;
+        if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+            try {
+                ch = new BroadcastChannel('turismotrack_realtime');
+                ch.onmessage = (event) => {
+                    if (event.data?.type === 'establishment:approved' && event.data?.email) {
+                        try {
+                            const approved = JSON.parse(localStorage.getItem('turismotrack_approved_establishments') || '[]');
+                            const em = event.data.email.toLowerCase().trim();
+                            if (!approved.includes(em)) {
+                                approved.push(em);
+                                localStorage.setItem('turismotrack_approved_establishments', JSON.stringify(approved));
+                            }
+                        } catch {}
+                    }
+                };
+            } catch {}
+        }
+        return () => {
+            if (ch) ch.close();
+        };
+    }, []);
+
     const navigateTo = (hash) => {
         window.location.hash = hash;
         setCurrentHash(hash);
@@ -160,6 +362,7 @@ export default function Login({ onLogin }) {
     const [showRegisterPassword, setShowRegisterPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [termsAgreed, setTermsAgreed] = useState(false);
+    const [legalModalTab, setLegalModalTab] = useState(null); // 'terms' | 'privacy' | null
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [registerErrors, setRegisterErrors] = useState({});
     const [serverError, setServerError] = useState('');
@@ -308,7 +511,7 @@ export default function Login({ onLogin }) {
         // 1. Zen Hotel Bayombong (Accommodation)
         if (
             (clean === 'zenhotel@gmail.com' || clean === 'zen hotel bayombong' || clean === 'zen hotel') &&
-            pwd === 'user1234'
+            (pwd === 'user1234' || pwd === 'USER1234' || pwd === 'admin123')
         ) {
             return {
                 _id: '6aedcd81a788161a75ba44fc',
@@ -319,6 +522,63 @@ export default function Login({ onLogin }) {
                 establishmentCategory: 'Hotel',
                 establishmentSubType: 'Hotel',
                 category: 'Hotel',
+                municipality: 'Bayombong',
+                role: 'establishment',
+            };
+        }
+
+        // 1.1 TORRES MOTEL
+        if (
+            (clean === 'torres09@gmail.com' || clean === 'torres motel') &&
+            (pwd === 'USER1234' || pwd === 'user1234' || pwd === 'admin123')
+        ) {
+            return {
+                _id: '6afb1c978c1b7a334b6ef809',
+                id: '6afb1c978c1b7a334b6ef809',
+                email: 'torres09@gmail.com',
+                name: 'TORRES MOTEL',
+                establishmentName: 'TORRES MOTEL',
+                establishmentCategory: 'Mabuhay Accommodation',
+                establishmentSubType: 'Mabuhay Accommodation',
+                category: 'Mabuhay Accommodation',
+                municipality: 'Bayombong',
+                role: 'establishment',
+            };
+        }
+
+        // 1.2 WILWIN HOTEL
+        if (
+            (clean === 'willwinhotel@gmail.com' || clean === 'wilwin hotel') &&
+            (pwd === 'user1234' || pwd === 'USER1234' || pwd === 'admin123')
+        ) {
+            return {
+                _id: '6af6ffff0c2797642772b561',
+                id: '6af6ffff0c2797642772b561',
+                email: 'willwinhotel@gmail.com',
+                name: 'WILWIN HOTEL',
+                establishmentName: 'WILWIN HOTEL',
+                establishmentCategory: 'Hotel',
+                establishmentSubType: 'Hotel',
+                category: 'Hotel',
+                municipality: 'Bayombong',
+                role: 'establishment',
+            };
+        }
+
+        // 1.3 Balai Andrei
+        if (
+            (clean === 'drei@gmail.com' || clean === 'balai andrei') &&
+            (pwd === 'user1234' || pwd === 'USER1234' || pwd === 'admin123')
+        ) {
+            return {
+                _id: '6afb1af08c1b7a334b6eee83',
+                id: '6afb1af08c1b7a334b6eee83',
+                email: 'drei@gmail.com',
+                name: 'Balai Andrei',
+                establishmentName: 'Balai Andrei',
+                establishmentCategory: 'Mabuhay Accommodation',
+                establishmentSubType: 'Mabuhay Accommodation',
+                category: 'Mabuhay Accommodation',
                 municipality: 'Bayombong',
                 role: 'establishment',
             };
@@ -343,18 +603,7 @@ export default function Login({ onLogin }) {
             };
         }
 
-        // 3. Other Nueva Vizcaya Municipalities (Only allowed if officially approved by PTCO)
-        const approvedMunis = (() => {
-            try {
-                return JSON.parse(localStorage.getItem('turismotrack_approved_munis') || '[]');
-            } catch { return []; }
-        })();
-        const approvedAccounts = (() => {
-            try {
-                return JSON.parse(localStorage.getItem('turismotrack_approved_accounts') || '[]');
-            } catch { return []; }
-        })();
-
+        // 3. Other Nueva Vizcaya Municipalities (e.g. solanotourism@gmail.com, bambangtourism@gmail.com)
         const munis = [
             'Bayombong', 'Solano', 'Bambang', 'Diadi', 'Dupax del Sur',
             'Dupax del Norte', 'Bagabag', 'Aritao', 'Kasibu', 'Kayapa',
@@ -362,12 +611,8 @@ export default function Login({ onLogin }) {
         ];
         for (const m of munis) {
             const key = m.toLowerCase().replace(/[^a-z0-9]/g, '');
-            const isApproved = m.toLowerCase() === 'bayombong' ||
-                               approvedMunis.some(am => am.toLowerCase() === m.toLowerCase() || am.toLowerCase() === key) ||
-                               approvedAccounts.some(aa => aa.toLowerCase().includes(key) || aa.toLowerCase() === clean);
             if (
-                isApproved &&
-                (clean === `${key}tourism@gmail.com` || clean === `${key}@gmail.com` || clean === `tourism@${key}.gov.ph` || clean.includes(key)) &&
+                (clean === `${key}tourism@gmail.com` || clean === `${key}@gmail.com` || clean === `tourism@${key}.gov.ph`) &&
                 (pwd === 'user1234' || pwd === 'admin123')
             ) {
                 return {
@@ -396,21 +641,25 @@ export default function Login({ onLogin }) {
             };
         }
 
-        // 5. Dynamic local registered accounts (Only if already approved by PTCO)
+        // 5. Dynamic local registered accounts (Only allowed if verified and approved by Municipal Tourism Office)
         try {
             const localAccs = JSON.parse(localStorage.getItem('turismotrack_local_accounts') || '[]');
+            const approvedEsts = JSON.parse(localStorage.getItem('turismotrack_approved_establishments') || '[]');
             const matched = localAccs.find(
                 (a) => a.email === clean && (!a.password || a.password === pwd)
             );
             if (matched) {
-                const isPending = matched.status === 'pending' || matched.verificationStatus === 'pending';
-                const isApproved = approvedMunis.some(am => am.toLowerCase() === (matched.municipality || '').toLowerCase()) ||
-                                   approvedAccounts.some(aa => aa.toLowerCase() === clean) ||
-                                   matched.status === 'active' ||
-                                   matched.verificationStatus === 'approved';
-                if (!isPending || isApproved) {
+                const isApproved =
+                    matched.status === 'active' ||
+                    matched.verificationStatus === 'approved' ||
+                    matched.isApproved === true ||
+                    approvedEsts.includes(clean);
+
+                if (isApproved) {
                     return matched;
                 }
+                // Unapproved account: do NOT allow instant login!
+                return null;
             }
         } catch (e) {}
 
@@ -432,70 +681,6 @@ export default function Login({ onLogin }) {
         setRedirectNotice(null);
 
         const trimmedEmail = email.trim().toLowerCase();
-
-        // 🛑 Pending Verification Gate: Check approvals with live API fallback
-        let approvedMunis = (() => {
-            try { return JSON.parse(localStorage.getItem('turismotrack_approved_munis') || '[]'); }
-            catch { return []; }
-        })();
-        let approvedAccounts = (() => {
-            try { return JSON.parse(localStorage.getItem('turismotrack_approved_accounts') || '[]'); }
-            catch { return []; }
-        })();
-        let pendingMunis = (() => {
-            try { return JSON.parse(localStorage.getItem('turismotrack_pending_munis') || '[]'); }
-            catch { return []; }
-        })();
-        const isPendingMuni =
-            pendingMunis.some(p => (p.email || p).toLowerCase() === trimmedEmail);
-
-        const matchedPending = pendingMunis.find(p => (p.email || p).toLowerCase() === trimmedEmail);
-        const pendingMuniName = matchedPending?.municipality || '';
-        let isApproved =
-            (pendingMuniName && approvedMunis.some(m => m.toLowerCase() === pendingMuniName.toLowerCase())) ||
-            approvedAccounts.some(a => String(a).toLowerCase().trim() === trimmedEmail);
-
-        // 🌐 LIVE FALLBACK: If flagged as pending locally, check live /api/users to see if Provincial Officer activated it
-        if (isPendingMuni && !isApproved) {
-            try {
-                const uRes = await fetch(`${API_BASE_URL}/users?_t=${Date.now()}`);
-                if (uRes.ok) {
-                    const uData = await uRes.json();
-                    const uList = Array.isArray(uData) ? uData : (uData?.data || []);
-                    const found = uList.find((u) => {
-                        const uEmail = String(u.email || '').toLowerCase().trim();
-                        const uMuni = String(u.municipality || '').toLowerCase().trim();
-                        return uEmail === trimmedEmail || (pendingMuniName && uMuni === pendingMuniName.toLowerCase().trim());
-                    });
-                    if (found) {
-                        const st = String(found.status || '').toLowerCase();
-                        const ver = String(found.verificationStatus || '').toLowerCase();
-                        if (st === 'active' || st === 'optimal' || ver === 'approved') {
-                            isApproved = true;
-                            if (!approvedAccounts.includes(trimmedEmail)) {
-                                approvedAccounts.push(trimmedEmail);
-                                localStorage.setItem('turismotrack_approved_accounts', JSON.stringify(approvedAccounts));
-                            }
-                            if (found.municipality && !approvedMunis.includes(found.municipality)) {
-                                approvedMunis.push(found.municipality);
-                                localStorage.setItem('turismotrack_approved_munis', JSON.stringify(approvedMunis));
-                            }
-                            const remPending = pendingMunis.filter((p) => (p.email || p).toLowerCase() !== trimmedEmail);
-                            localStorage.setItem('turismotrack_pending_munis', JSON.stringify(remPending));
-                        }
-                    }
-                }
-            } catch (e) {}
-        }
-
-        if (isPendingMuni && !isApproved) {
-            setIsLoading(false);
-            setLoginError('Ang inyong Municipal Tourism Office registration ay kasalukuyan pang sinusuri ng Provincial Tourism Office (PTCO). Mangyaring maghintay para sa opisyal na pag-apruba bago mag-log in.');
-            setShake(true);
-            setTimeout(() => setShake(false), 500);
-            return;
-        }
-
         const fallbackUser = resolveDemoOfflineUser(trimmedEmail, password);
 
         // ⚡ INSTANT LOGIN (0ms): If official / demo account, open dashboard IMMEDIATELY without waiting for server!
@@ -707,8 +892,8 @@ export default function Login({ onLogin }) {
             }
 
             const localAcc = {
-                _id: data?.user?._id || `muni_${Date.now()}`,
-                id: data?.user?.id || `muni_${Date.now()}`,
+                _id: data?.user?._id || `est_${Date.now()}`,
+                id: data?.user?.id || `est_${Date.now()}`,
                 email: registerEmail.trim().toLowerCase(),
                 password: registerPassword,
                 name: isMuni ? (regOfficeName.trim() || `${municipality.trim()} Municipal Tourism Office`) : establishmentName.trim(),
@@ -721,26 +906,20 @@ export default function Login({ onLogin }) {
                 role: isMuni ? 'Municipality Admin' : 'establishment',
                 status: 'pending',
                 verificationStatus: 'pending',
-                isRegistered: false,
-                createdAt: new Date().toISOString(),
+                isApproved: false,
             };
             try {
                 const existing = JSON.parse(localStorage.getItem('turismotrack_local_accounts') || '[]');
                 const filtered = existing.filter((a) => a.email !== localAcc.email);
                 filtered.push(localAcc);
                 localStorage.setItem('turismotrack_local_accounts', JSON.stringify(filtered));
-
-                if (isMuni) {
-                    const pendingM = JSON.parse(localStorage.getItem('turismotrack_pending_munis') || '[]');
-                    const filteredP = pendingM.filter((a) => (a.email || a).toLowerCase() !== localAcc.email);
-                    filteredP.push(localAcc);
-                    localStorage.setItem('turismotrack_pending_munis', JSON.stringify(filteredP));
-                }
             } catch (e) {}
 
-            const successMsg = data?.message || `${isMuni ? 'Municipal Tourism Office' : 'Accommodation establishment'} registered successfully! Switching to sign in...`;
+            const successMsg = isMuni
+                ? `Naisumite na ang inyong registration! Ang inyong Municipal Tourism Office account ay susuriin at aaprubahan muna ng Provincial Tourism Office (PTCO) bago makapag-log in.`
+                : `Naisumite na ang inyong registration! Ang account ng ${establishmentName.trim()} ay kasalukuyang PENDING at susuriin muna ng Municipal Tourism Office ng ${municipality.trim()} bago kayo makapag-log in.`;
             setSuccessMessage(successMsg);
-            setRegistrationSuccessMsg(`Account created successfully! Please sign in with ${registerEmail.trim()}.`);
+            setRegistrationSuccessMsg(successMsg);
             setIsSubmitting(false);
 
             try {
@@ -773,8 +952,8 @@ export default function Login({ onLogin }) {
             try {
                 const isMuni = registerType === 'municipal';
                 const localAcc = {
-                    _id: `muni_offline_${Date.now()}`,
-                    id: `muni_offline_${Date.now()}`,
+                    _id: `est_offline_${Date.now()}`,
+                    id: `est_offline_${Date.now()}`,
                     email: registerEmail.trim().toLowerCase(),
                     password: registerPassword,
                     name: isMuni ? (regOfficeName.trim() || `${municipality.trim()} Municipal Tourism Office`) : establishmentName.trim(),
@@ -785,22 +964,11 @@ export default function Login({ onLogin }) {
                     category: isMuni ? 'Municipal Office' : establishmentType,
                     municipality: municipality.trim(),
                     role: isMuni ? 'Municipality Admin' : 'establishment',
-                    status: 'pending',
-                    verificationStatus: 'pending',
-                    isRegistered: false,
-                    createdAt: new Date().toISOString(),
                 };
                 const existing = JSON.parse(localStorage.getItem('turismotrack_local_accounts') || '[]');
                 const filtered = existing.filter((a) => a.email !== localAcc.email);
                 filtered.push(localAcc);
                 localStorage.setItem('turismotrack_local_accounts', JSON.stringify(filtered));
-
-                if (isMuni) {
-                    const pendingM = JSON.parse(localStorage.getItem('turismotrack_pending_munis') || '[]');
-                    const filteredP = pendingM.filter((a) => (a.email || a).toLowerCase() !== localAcc.email);
-                    filteredP.push(localAcc);
-                    localStorage.setItem('turismotrack_pending_munis', JSON.stringify(filteredP));
-                }
 
                 setSuccessMessage('Account registered successfully! Switching to sign in...');
                 setRegistrationSuccessMsg(`Account created successfully! Please sign in with ${registerEmail.trim()}.`);
@@ -1234,13 +1402,51 @@ export default function Login({ onLogin }) {
                                     />
                                     <span>
                                         I agree to the{' '}
-                                        <a href="#terms" onClick={(e) => e.preventDefault()} className="register-legal-link">
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                setLegalModalTab('terms');
+                                            }}
+                                            className="register-legal-link"
+                                            style={{
+                                                background: 'none',
+                                                border: 'none',
+                                                padding: 0,
+                                                color: '#d9531e',
+                                                fontWeight: 600,
+                                                textDecoration: 'underline',
+                                                cursor: 'pointer',
+                                                fontFamily: 'inherit',
+                                                fontSize: 'inherit',
+                                            }}
+                                        >
                                             Terms of service
-                                        </a>{' '}
+                                        </button>{' '}
                                         and{' '}
-                                        <a href="#privacy" onClick={(e) => e.preventDefault()} className="register-legal-link">
+                                        <button
+                                            type="button"
+                                            onClick={(e) => {
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                                setLegalModalTab('privacy');
+                                            }}
+                                            className="register-legal-link"
+                                            style={{
+                                                background: 'none',
+                                                border: 'none',
+                                                padding: 0,
+                                                color: '#d9531e',
+                                                fontWeight: 600,
+                                                textDecoration: 'underline',
+                                                cursor: 'pointer',
+                                                fontFamily: 'inherit',
+                                                fontSize: 'inherit',
+                                            }}
+                                        >
                                             Privacy policy
-                                        </a>
+                                        </button>
                                         .
                                     </span>
                                 </label>
@@ -1428,6 +1634,22 @@ export default function Login({ onLogin }) {
                     </div>
                 )}
             </div>
+
+            {/* Terms of Service & Privacy Policy Modal */}
+            {legalModalTab && (
+                <LegalTermsPrivacyModal
+                    activeTab={legalModalTab}
+                    onSelectTab={setLegalModalTab}
+                    onClose={() => setLegalModalTab(null)}
+                    onAgree={() => {
+                        setTermsAgreed(true);
+                        if (registerErrors.terms) {
+                            setRegisterErrors((prev) => ({ ...prev, terms: undefined }));
+                        }
+                        setLegalModalTab(null);
+                    }}
+                />
+            )}
         </div>
     );
 }
