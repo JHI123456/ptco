@@ -588,7 +588,7 @@ const MonitoredEstablishments = () => {
                 <div className="est-card-footer">
                   <div className="est-officer-info">
                     <User size={15} className="est-officer-icon" />
-                    <span className="est-officer-name">{item.officer || item.contact || item.email || "General Manager"}</span>
+                    <span className="est-officer-name">{item.officer || item.email || "General Manager"}</span>
                   </div>
                 </div>
               </div>
