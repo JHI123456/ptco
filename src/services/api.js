@@ -99,9 +99,7 @@ export async function fetchVisitorAnalytics(params = {}) {
                 return { ...m, domestic: 5575, overnight: 5592, foreign: 17, total: 5592 };
               }
             }
-            if (idx >= 10) { // November and December: currently ongoing, no final monthly filing yet
-              return { ...m, domestic: 0, overnight: 0, foreign: 0, total: 0 };
-            }
+            // Keep and preserve live November arrivals and filings from database
             return m;
           });
         }

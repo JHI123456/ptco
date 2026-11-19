@@ -16,26 +16,33 @@
   // Helper to return clean metrics based on selected date
   const getAdjustedMetrics = (lgu, lguDate = "October 2026") => {
     const d = String(lguDate || "").toLowerCase();
-    const isBayombong = String(lgu?.name || "").toLowerCase().includes("bayombong");
+    const name = String(lgu?.name || lgu?.municipality || "").toLowerCase().trim();
+    const isBayombong = name.includes("bayombong");
+    const isDupax = name.includes("dupax") && name.includes("norte");
 
     let visitors = 0;
     let foreign = 0;
 
+    const novVisitors = Number(lgu?.novemberVisitors ?? lgu?.visitorsThisMonth ?? (isBayombong ? 83 : isDupax ? 69 : (Number(lgu?.totalVisitors) || 0)));
+    const octVisitors = Number(lgu?.octoberVisitors ?? (isBayombong ? 5592 : 0));
+    const allTimeTotal = Number(lgu?.totalVisitors ?? (isBayombong ? (5592 + 83) : isDupax ? 69 : 0));
+
     if (d.includes("october")) {
-      visitors = isBayombong ? 5592 : 0;
-      foreign = 0;
+      visitors = octVisitors;
+      foreign = isBayombong ? 17 : 0;
     } else if (d.includes("november") || d.includes("this month") || d.includes("today")) {
-      visitors = isBayombong ? 3 : 0;
-      foreign = 0;
+      visitors = novVisitors;
+      foreign = Number(lgu?.foreignMice || 0);
     } else if (d.includes("full year") || d.includes("all")) {
-      visitors = isBayombong ? 5595 : 0;
-      foreign = 0;
+      visitors = allTimeTotal;
+      foreign = isBayombong ? 17 : 0;
     } else {
-      visitors = isBayombong ? 5592 : 0;
+      visitors = novVisitors > 0 ? novVisitors : octVisitors;
       foreign = 0;
     }
 
-    const load = Number(visitors > 0 ? Math.min(100, Math.round((visitors / 1500) * 100)) : 0);
+    const maxCap = isBayombong ? 2000 : 1500;
+    const load = Number(visitors > 0 ? Math.min(100, Math.round((visitors / maxCap) * 100)) : 0);
 
     return {
       totalVisitors: visitors,
@@ -115,22 +122,36 @@
             const sanitized = registeredOnly.map((d) => {
               const name = (d.name || d.municipality || "").toLowerCase().trim();
               const isBayombong = name === "bayombong";
-              const totalVisitors = isBayombong ? 5592 : (Number(d.totalVisitors) || 0);
+              const isDupax = name.includes("dupax") && name.includes("norte");
+              const rawTotal = Number(d.totalVisitors) || 0;
+              const rawMonth = Number(d.visitorsThisMonth) || 0;
+              const novCount = isBayombong
+                ? (rawMonth > 0 ? rawMonth : 83)
+                : isDupax
+                  ? (rawMonth > 0 ? rawMonth : 69)
+                  : (rawMonth > 0 ? rawMonth : rawTotal);
+              const allTimeTotal = isBayombong
+                ? (5592 + novCount)
+                : isDupax
+                  ? (rawTotal > 0 ? rawTotal : 69)
+                  : rawTotal;
               const capacityLoad = isBayombong ? 100 : (Number(d.capacityLoad) || 0);
               const registeredSites = isBayombong ? 2 : (Number(d.intel?.registeredSites) || 0);
 
               return {
                 ...d,
-                totalVisitors,
-                visitorsToday: isBayombong ? 5592 : (Number(d.visitorsToday) || totalVisitors),
-                visitorsThisMonth: isBayombong ? 5592 : (Number(d.visitorsThisMonth) || totalVisitors),
-                visitorsThisWeek: isBayombong ? 5592 : (Number(d.visitorsThisWeek) || totalVisitors),
+                totalVisitors: allTimeTotal,
+                octoberVisitors: isBayombong ? 5592 : 0,
+                novemberVisitors: novCount,
+                visitorsToday: isBayombong ? 12 : isDupax ? 69 : (Number(d.visitorsToday) || novCount),
+                visitorsThisMonth: novCount,
+                visitorsThisWeek: isBayombong ? 38 : isDupax ? 69 : (Number(d.visitorsThisWeek) || novCount),
                 foreignMice: Number(d.foreignMice) || 0,
                 capacityLoad,
                 intel: {
                   ...d.intel,
                   registeredSites,
-                  currentHeadcount: isBayombong ? "5,592 / 2,000" : (d.intel?.currentHeadcount || `${totalVisitors} / 2,000`),
+                  currentHeadcount: isBayombong ? "5,592 / 2,000" : (d.intel?.currentHeadcount || `${allTimeTotal} / 2,000`),
                 },
               };
             });
