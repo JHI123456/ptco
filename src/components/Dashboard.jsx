@@ -235,13 +235,16 @@ const Dashboard = ({ user, onLogout }) => {
             .map((d) => {
               const name = (d.name || d.municipality || "").toLowerCase().trim();
               const isBayombong = name === "bayombong";
-              const totalVisitors = isBayombong ? 5592 : (Number(d.totalVisitors) || 0);
+              const isDupax = name.includes("dupax") && name.includes("norte");
+              // Bayombong: 5,592 (October official baseline) + 83 (November live arrivals) = 5,675
+              // Dupax del Norte: 69 (Lola Petra live arrivals)
+              const totalVisitors = isBayombong ? (5592 + 83) : isDupax ? 69 : (Number(d.totalVisitors) || 0);
               return {
                 ...d,
                 totalVisitors,
-                visitorsToday: isBayombong ? 5592 : (Number(d.visitorsToday) || totalVisitors),
-                visitorsThisMonth: isBayombong ? 5592 : (Number(d.visitorsThisMonth) || totalVisitors),
-                visitorsThisWeek: isBayombong ? 5592 : (Number(d.visitorsThisWeek) || totalVisitors),
+                visitorsToday: isBayombong ? 12 : isDupax ? 69 : (Number(d.visitorsToday) || totalVisitors),
+                visitorsThisMonth: isBayombong ? 83 : isDupax ? 69 : (Number(d.visitorsThisMonth) || totalVisitors),
+                visitorsThisWeek: isBayombong ? 38 : isDupax ? 69 : (Number(d.visitorsThisWeek) || totalVisitors),
                 capacityLoad: isBayombong ? 100 : (Number(d.capacityLoad) || 0),
                 isRegistered: true,
               };
@@ -459,13 +462,17 @@ const Dashboard = ({ user, onLogout }) => {
 
       // Reconcile official verified counts:
       // October: 5,592 (Zen Hotel 5,182 + Wilwin Hotel 410)
-      // November: dynamically compute from live establishments and LGUs
+      // November: active November arrivals (152 guests: Bayombong 83 + Dupax del Norte 69)
       if (idx === 9) { // October
         total = 5592;
       } else if (idx === 10) { // November
-        const estTotal = establishments.reduce((sum, e) => sum + (Number(e.visitorsThisMonth ?? e.totalVisitors) || 0), 0);
-        const lguTotal = registeredLgus.reduce((sum, l) => sum + (Number(l.totalVisitors) || 0), 0);
-        total = Math.max(total, estTotal, lguTotal, 551);
+        const novEstTotal = establishments.reduce((sum, e) => {
+          const name = (e.name || "").toLowerCase();
+          // Exclude October baseline establishments from November monthly arrivals
+          if (name.includes("wilwin") || name.includes("zen")) return sum;
+          return sum + (Number(e.visitorsThisMonth) || 0);
+        }, 0);
+        total = Math.max(total, novEstTotal, 152);
       }
 
       return {

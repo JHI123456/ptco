@@ -48,7 +48,7 @@ const MunicipalRankings = ({ initialCount = 3, lgus: propLgus = null }) => {
         const isBayombong = name === "bayombong";
         return {
           ...item,
-          totalVisitors: isBayombong ? 5592 : (Number(item.totalVisitors) || 0),
+          totalVisitors: Number(item.totalVisitors) > 0 ? Number(item.totalVisitors) : (isBayombong ? 5592 : 0),
         };
       })
       .sort((a, b) => {
