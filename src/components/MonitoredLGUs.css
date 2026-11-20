@@ -202,11 +202,16 @@
   border-radius: 9999px;
   font-size: 12.5px;
   font-weight: 600;
-  border: none;
+  border: 1px solid #e2e8f0;
   background-color: #f1f5f9;
   color: #475569;
   cursor: pointer;
   white-space: nowrap;
+  flex-shrink: 0;
+  min-width: max-content;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -220,6 +225,7 @@
 .district-pill.active {
   background-color: #0f172a;
   color: #ffffff;
+  border-color: #0f172a;
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.2);
 }
 
@@ -227,6 +233,12 @@
   width: 1px;
   height: 22px;
   background-color: #e2e8f0;
+  flex-shrink: 0;
+}
+@media (max-width: 1360px) {
+  .lgu-filter-separator {
+    display: none;
+  }
 }
 
 .lgu-sort-group {
@@ -987,4 +999,32 @@
 .lgu-reset-btn:hover {
   background-color: #e2e8f0;
   color: #0f172a;
+}
+
+/* Responsive Controls Layout */
+@media (max-width: 1360px) {
+  .lgu-controls-card {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 14px !important;
+  }
+  .lgu-search-box {
+    width: 100% !important;
+    min-width: 100% !important;
+  }
+  .lgu-filters-cluster,
+  .lgu-filters-row {
+    width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    flex-wrap: wrap !important;
+    gap: 14px !important;
+  }
+  .lgu-pill-group {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    flex-wrap: nowrap !important;
+  }
 }

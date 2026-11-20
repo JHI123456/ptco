@@ -50,6 +50,16 @@ export function buildSubmissionApprovalKeys(item) {
     ? 'DOT'
     : rawType.includes('CUS')
     ? 'CUS'
+    : rawType.includes('DAE1A')
+    ? 'DAE1A'
+    : (rawType.includes('DAE3B') || rawType.includes('3B2'))
+    ? 'DAE3B2'
+    : rawType.includes('DAE4A')
+    ? 'DAE4A'
+    : (rawType.includes('FORMA') || rawType.includes('DAE1B'))
+    ? 'FORMA'
+    : rawType.includes('HOLIDAY')
+    ? 'HOLIDAY'
     : rawType || 'REPORT';
 
   const periodText = String(
@@ -217,11 +227,11 @@ export async function fetchAllMunicipalSubmissions() {
   // Multi-source fallback: merge official LGU submissions from /inbox
   inboxItems.forEach((item) => {
     const isMuniReport =
-      item.formType?.includes('VAR 2') ||
-      item.formType?.includes('DAE 2') ||
-      item.formType?.includes('DOT') ||
-      item.formType?.includes('CUS') ||
-      item.formData?.rows ||
+      item.category === 'submission' ||
+      item.type === 'submission' ||
+      Boolean(item.formType) ||
+      Boolean(item.formData?.formType) ||
+      Boolean(item.formData?.rows) ||
       item.status === 'Submitted to Province' ||
       isRawStatusApproved(item.status, item.isLocked);
 
@@ -253,7 +263,7 @@ export async function fetchAllMunicipalSubmissions() {
           monthYear: p,
           rows: fd.rows || [],
           totals: fd.totals || {},
-          visitors: item.visitors || fd.totals?.grandTotal || fd.totalGuests || 0,
+          visitors: Number(item.visitors || fd.visitors || fd.totals?.grandTotal || fd.totalGuests || fd.totalVisitors || fd.grandTotal || 0),
           status: item.status || 'Submitted to Province',
           isLocked: Boolean(item.isLocked),
           submittedBy: item.sender || `${muni} Municipal Tourism Office`,

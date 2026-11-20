@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import './OfficialFormViewer.css';
 
 /**
@@ -623,69 +623,426 @@ function DAE1ADocumentSheet({ item }) {
   );
 }
 
+
+function DOTActualFormTable({ formData, estName, muni, period }) {
+  const [dayFilter, setDayFilter] = useState('');
+  const daily = Array.isArray(formData?.dailyRecords)
+    ? formData.dailyRecords
+    : Array.isArray(formData?.records)
+    ? formData.records
+    : Array.isArray(formData?.rows)
+    ? formData.rows
+    : [];
+  const totals = (typeof formData?.totals === 'object' && formData.totals !== null) ? formData.totals : {};
+
+  const computedTotals = daily.reduce(
+    (acc, d) => {
+      if (!d) return acc;
+      acc.nvM += Number(d.NuevavizcayaMale ?? d.nvM ?? 0) || 0;
+      acc.nvF += Number(d.NuevavizcayaFemale ?? d.nvF ?? 0) || 0;
+      acc.nvTot += Number(d.NuevavizcayaTotal ?? d.nvTotal ?? 0) || 0;
+      acc.opM += Number(d.otherPhilMale ?? d.opM ?? 0) || 0;
+      acc.opF += Number(d.otherPhilFemale ?? d.opF ?? 0) || 0;
+      acc.opTot += Number(d.otherPhilTotal ?? d.opTotal ?? 0) || 0;
+      acc.frM += Number(d.foreignResidenceMale ?? d.frM ?? 0) || 0;
+      acc.frF += Number(d.foreignResidenceFemale ?? d.frF ?? 0) || 0;
+      acc.frTot += Number(d.foreignResidenceTotal ?? d.frTotal ?? 0) || 0;
+      acc.fcM += Number(d.foreignCountryMale ?? d.fcM ?? 0) || 0;
+      acc.fcF += Number(d.foreignCountryFemale ?? d.fcF ?? 0) || 0;
+      acc.fcTot += Number(d.foreignCountryTotal ?? d.fcTotal ?? 0) || 0;
+      acc.grand += Number(d.grandTotal ?? 0) || 0;
+      return acc;
+    },
+    { nvM: 0, nvF: 0, nvTot: 0, opM: 0, opF: 0, opTot: 0, frM: 0, frF: 0, frTot: 0, fcM: 0, fcF: 0, fcTot: 0, grand: 0 }
+  );
+
+  const finalTotals = {
+    nvM: totals.nvM ?? computedTotals.nvM,
+    nvF: totals.nvF ?? computedTotals.nvF,
+    nvTot: totals.nvTotal ?? (computedTotals.nvTot || (computedTotals.nvM + computedTotals.nvF)),
+    opM: totals.otherPhilM ?? computedTotals.opM,
+    opF: totals.otherPhilF ?? computedTotals.opF,
+    opTot: totals.otherPhilTotal ?? (computedTotals.opTot || (computedTotals.opM + computedTotals.opF)),
+    frM: totals.frM ?? computedTotals.frM,
+    frF: totals.frF ?? computedTotals.frF,
+    frTot: totals.frTotal ?? (computedTotals.frTot || (computedTotals.frM + computedTotals.frF)),
+    fcM: totals.fcM ?? computedTotals.fcM,
+    fcF: totals.fcF ?? computedTotals.fcF,
+    fcTot: totals.fcTotal ?? (computedTotals.fcTot || (computedTotals.fcM + computedTotals.fcF)),
+    grand: totals.grandTotal || computedTotals.grand || formData.visitors || 0,
+  };
+
+  const filteredDaily = daily.filter((d) => {
+    if (!d) return false;
+    if (!dayFilter.trim()) return true;
+    return String(d.day || '').includes(dayFilter.trim());
+  });
+
+  return (
+    <div className="afv-form-wrapper dot-actual-wrapper" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ backgroundColor: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', borderRadius: '4px', padding: '3px 8px', fontSize: '11px', fontWeight: 800 }}>
+            DOT REGULATORY STANDARD
+          </span>
+          <span style={{ backgroundColor: '#f1f5f9', color: '#475569', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '3px 8px', fontSize: '11px', fontWeight: 700 }}>
+            Audited Official View
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => window.print()}
+          style={{
+            border: '1px solid #cbd5e1',
+            background: '#ffffff',
+            color: '#334155',
+            borderRadius: '6px',
+            padding: '5px 12px',
+            fontSize: '12px',
+            fontWeight: 700,
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+          }}
+        >
+          <span>🖨️</span> Print Form
+        </button>
+      </div>
+
+      <div>
+        <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', margin: '4px 0 2px 0', letterSpacing: '0.2px' }}>
+          ANNUAL / QUARTERLY REPORT FORM – DOT
+        </h3>
+        <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 10px 0' }}>
+          Department of Tourism Standard Monthly & Daily Guest Logsheet — Certified Submission Record
+        </p>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+        <div>
+          <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '4px' }}>
+            ACCOMMODATION ESTABLISHMENT
+          </label>
+          <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '8px 12px', fontSize: '13.5px', fontWeight: 700, color: '#0f172a' }}>
+            {estName}
+          </div>
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '4px' }}>
+            MUNICIPALITY
+          </label>
+          <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '8px 12px', fontSize: '13.5px', fontWeight: 600, color: '#0f172a' }}>
+            {muni}
+          </div>
+        </div>
+        <div>
+          <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '4px' }}>
+            REPORTING PERIOD / MONTH
+          </label>
+          <div style={{ background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: '6px', padding: '8px 12px', fontSize: '13.5px', fontWeight: 700, color: '#b45309' }}>
+            {period}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ margin: '4px 0' }}>
+        <label style={{ display: 'block', fontSize: '10.5px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: '4px' }}>
+          FILTER DAY
+        </label>
+        <div style={{ position: 'relative', maxWidth: '220px' }}>
+          <input
+            type="text"
+            value={dayFilter}
+            onChange={(e) => setDayFilter(e.target.value)}
+            placeholder="Search Day (1-31)..."
+            style={{
+              width: '100%',
+              padding: '6px 10px 6px 28px',
+              border: '1px solid #cbd5e1',
+              borderRadius: '6px',
+              fontSize: '12px',
+              outline: 'none',
+              boxSizing: 'border-box',
+              background: '#ffffff',
+            }}
+          />
+          <span style={{ position: 'absolute', left: '8px', top: '50%', transform: 'translateY(-50%)', fontSize: '12px', color: '#94a3b8' }}>🔍</span>
+        </div>
+      </div>
+
+      <div style={{ border: '1.5px solid #d97706', borderRadius: '8px', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(217, 119, 6, 0.1)' }}>
+        <div style={{ overflowX: 'auto', maxHeight: '380px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'center', minWidth: '850px' }}>
+            <thead>
+              <tr style={{ background: '#b45309', color: '#ffffff', fontSize: '11px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.4px' }}>
+                <th rowSpan="2" style={{ padding: '8px 6px', borderRight: '1px solid #92400e', width: '50px' }}>DAY</th>
+                <th colSpan="3" style={{ padding: '6px', borderRight: '1px solid #92400e' }}>NUEVA VIZCAYA RESIDENT</th>
+                <th colSpan="3" style={{ padding: '6px', borderRight: '1px solid #92400e' }}>OTHER PHIL. RESIDENTS</th>
+                <th colSpan="3" style={{ padding: '6px', borderRight: '1px solid #92400e' }}>FOREIGN RESIDENCE</th>
+                <th colSpan="3" style={{ padding: '6px', borderRight: '1px solid #92400e' }}>FOREIGN COUNTRY</th>
+                <th rowSpan="2" style={{ padding: '8px 6px', width: '90px' }}>GRAND TOTAL</th>
+              </tr>
+              <tr style={{ background: '#92400e', color: '#fef3c7', fontSize: '10.5px', fontWeight: 700 }}>
+                <th style={{ padding: '4px', borderRight: '1px solid rgba(255,255,255,0.1)' }}>Male</th>
+                <th style={{ padding: '4px', borderRight: '1px solid rgba(255,255,255,0.1)' }}>Female</th>
+                <th style={{ padding: '4px', borderRight: '1px solid #78350f' }}>Total</th>
+                <th style={{ padding: '4px', borderRight: '1px solid rgba(255,255,255,0.1)' }}>Male</th>
+                <th style={{ padding: '4px', borderRight: '1px solid rgba(255,255,255,0.1)' }}>Female</th>
+                <th style={{ padding: '4px', borderRight: '1px solid #78350f' }}>Total</th>
+                <th style={{ padding: '4px', borderRight: '1px solid rgba(255,255,255,0.1)' }}>Male</th>
+                <th style={{ padding: '4px', borderRight: '1px solid rgba(255,255,255,0.1)' }}>Female</th>
+                <th style={{ padding: '4px', borderRight: '1px solid #78350f' }}>Total</th>
+                <th style={{ padding: '4px', borderRight: '1px solid rgba(255,255,255,0.1)' }}>Male</th>
+                <th style={{ padding: '4px', borderRight: '1px solid rgba(255,255,255,0.1)' }}>Female</th>
+                <th style={{ padding: '4px', borderRight: '1px solid #78350f' }}>Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredDaily.map((d, idx) => {
+                if (!d) return null;
+                const nvM = Number(d.NuevavizcayaMale ?? d.nvM ?? 0);
+                const nvF = Number(d.NuevavizcayaFemale ?? d.nvF ?? 0);
+                const nvTot = Number(d.NuevavizcayaTotal ?? d.nvTotal ?? (nvM + nvF));
+                const opM = Number(d.otherPhilMale ?? d.opM ?? 0);
+                const opF = Number(d.otherPhilFemale ?? d.opF ?? 0);
+                const opTot = Number(d.otherPhilTotal ?? d.opTotal ?? (opM + opF));
+                const frM = Number(d.foreignResidenceMale ?? d.frM ?? 0);
+                const frF = Number(d.foreignResidenceFemale ?? d.frF ?? 0);
+                const frTot = Number(d.foreignResidenceTotal ?? d.frTotal ?? (frM + frF));
+                const fcM = Number(d.foreignCountryMale ?? d.fcM ?? 0);
+                const fcF = Number(d.foreignCountryFemale ?? d.fcF ?? 0);
+                const fcTot = Number(d.foreignCountryTotal ?? d.fcTotal ?? (fcM + fcF));
+                const grand = Number(d.grandTotal ?? (nvTot + opTot + frTot + fcTot));
+
+                const isEven = idx % 2 === 0;
+                const rowBg = isEven ? '#ffffff' : '#fffbeb';
+
+                const cellStyle = (val) => ({
+                  padding: '6px 4px',
+                  borderBottom: '1px solid #fde68a',
+                  color: val === 0 ? '#0284c7' : '#0f172a',
+                  fontWeight: val > 0 ? 700 : 500,
+                });
+
+                const totCellStyle = (val) => ({
+                  padding: '6px 4px',
+                  borderBottom: '1px solid #fde68a',
+                  borderRight: '1px solid #fef08a',
+                  color: val > 0 ? '#b45309' : '#0284c7',
+                  fontWeight: 700,
+                  backgroundColor: 'rgba(254, 243, 199, 0.4)',
+                });
+
+                return (
+                  <tr key={d.day || idx} style={{ backgroundColor: rowBg }}>
+                    <td style={{ padding: '6px 4px', fontWeight: 800, color: '#b45309', borderBottom: '1px solid #fde68a', borderRight: '1px solid #fde68a', background: 'rgba(254, 243, 199, 0.6)' }}>
+                      {d.day}
+                    </td>
+                    <td style={cellStyle(nvM)}>{nvM}</td>
+                    <td style={cellStyle(nvF)}>{nvF}</td>
+                    <td style={totCellStyle(nvTot)}>{nvTot}</td>
+                    <td style={cellStyle(opM)}>{opM}</td>
+                    <td style={cellStyle(opF)}>{opF}</td>
+                    <td style={totCellStyle(opTot)}>{opTot}</td>
+                    <td style={cellStyle(frM)}>{frM}</td>
+                    <td style={cellStyle(frF)}>{frF}</td>
+                    <td style={totCellStyle(frTot)}>{frTot}</td>
+                    <td style={cellStyle(fcM)}>{fcM}</td>
+                    <td style={cellStyle(fcF)}>{fcF}</td>
+                    <td style={totCellStyle(fcTot)}>{fcTot}</td>
+                    <td style={{ padding: '6px 4px', borderBottom: '1px solid #fde68a', fontWeight: 800, color: '#b45309', background: 'rgba(254, 243, 199, 0.7)' }}>
+                      {grand}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr style={{ background: '#78350f', color: '#ffffff', fontWeight: 800, fontSize: '11px', textTransform: 'uppercase' }}>
+                <td style={{ padding: '8px 4px' }}>TOTAL</td>
+                <td style={{ padding: '8px 4px' }}>{finalTotals.nvM}</td>
+                <td style={{ padding: '8px 4px' }}>{finalTotals.nvF}</td>
+                <td style={{ padding: '8px 4px', background: '#92400e', color: '#fef3c7' }}>{finalTotals.nvTot}</td>
+                <td style={{ padding: '8px 4px' }}>{finalTotals.opM}</td>
+                <td style={{ padding: '8px 4px' }}>{finalTotals.opF}</td>
+                <td style={{ padding: '8px 4px', background: '#92400e', color: '#fef3c7' }}>{finalTotals.opTot}</td>
+                <td style={{ padding: '8px 4px' }}>{finalTotals.frM}</td>
+                <td style={{ padding: '8px 4px' }}>{finalTotals.frF}</td>
+                <td style={{ padding: '8px 4px', background: '#92400e', color: '#fef3c7' }}>{finalTotals.frTot}</td>
+                <td style={{ padding: '8px 4px' }}>{finalTotals.fcM}</td>
+                <td style={{ padding: '8px 4px' }}>{finalTotals.fcF}</td>
+                <td style={{ padding: '8px 4px', background: '#92400e', color: '#fef3c7' }}>{finalTotals.fcTot}</td>
+                <td style={{ padding: '8px 4px', background: '#451a03', color: '#fef3c7', fontSize: '12.5px', fontWeight: 900 }}>
+                  {finalTotals.grand}
+                </td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ==========================================================================
-   DAE 2 Document Sheet
+   DAE 2 Document Sheet (Monthly Accommodation Compliance Form)
    ========================================================================== */
 function DAE2DocumentSheet({ item }) {
-  const formData = item.formData || {};
-  const estName = formData.establishmentName || item.sender || 'Accommodation Facility';
-  const muni = item.municipality || formData.municipality || '—';
-  const period = formData.reportingPeriod || item.details?.reportingPeriod || 'Current Month';
+  const formData = item.formData || item.details || {};
+  const provinceName = formData.province || 'NUEVA VIZCAYA';
+  const muniName = formData.municipality || item.municipality || 'Bayombong';
+  const repPeriod = formData.reportingPeriod || `${formData.reportingMonth || 'Current'} ${formData.reportingYear || ''}`;
+  const daysInMonth = Number(formData.daysInMonth || 31);
+  const aeName = formData.isUndisclosed ? 'Confidential (Undisclosed AE per Note 1)' : (formData.establishmentName || item.sender || 'Accommodation Facility');
+  const totalGuests = Number(formData.totalGuests || formData.visitors || (Number(formData.domesticArrival || 0) + Number(formData.foreignArrival || 0) + Number(formData.overseasArrival || 0) + Number(formData.unknownArrival || 0)));
+  const totalGuestNights = Number(formData.totalGuestNights || (Number(formData.domesticNights || 0) + Number(formData.foreignNights || 0) + Number(formData.overseasNights || 0) + Number(formData.unknownNights || 0)));
 
   return (
     <div className="ofv-container">
       <div className="afv-official-header dae2-theme">
         <div className="afv-header-badge">OFFICIAL DOT FORM DAE - 2</div>
-        <h3>Monthly Reporting Format for Accommodation Establishment</h3>
+        <h3>FORM DAE - 2 — Monthly Reporting Format for Accommodation Establishment</h3>
         <p className="afv-header-sub">Capacity, Occupancy & Residence Breakdown — DOT Official Standard</p>
       </div>
 
       <div className="afv-meta-card">
         <div className="afv-meta-grid">
           <div className="afv-meta-item">
-            <label>Name of Province</label>
-            <div className="afv-readonly-value bold">NUEVA VIZCAYA</div>
+            <label>Name of Province / HUC/ICC</label>
+            <div className="afv-readonly-value bold">{provinceName}</div>
           </div>
           <div className="afv-meta-item">
-            <label>Municipality</label>
-            <div className="afv-readonly-value bold">{muni}</div>
+            <label>Name of Municipality/City</label>
+            <div className="afv-readonly-value bold">{muniName}</div>
           </div>
           <div className="afv-meta-item">
-            <label>Facility Name</label>
-            <div className="afv-readonly-value bold">{estName}</div>
+            <label>Facility Identification</label>
+            <div className="afv-readonly-value bold">{aeName}</div>
           </div>
           <div className="afv-meta-item">
             <label>Reporting Period</label>
-            <div className="afv-readonly-value highlight">{period}</div>
+            <div className="afv-readonly-value highlight">{repPeriod}</div>
           </div>
         </div>
       </div>
 
       <div className="afv-section-card">
-        <h4>Submitted Capacity & Occupancy Records</h4>
-        <table className="afv-table">
+        <h4>Monthly Metrics & Capacity Breakdown</h4>
+        <table className="afv-table" style={{ border: '1px solid #cbd5e1' }}>
           <thead>
             <tr>
-              <th>Metric Description</th>
-              <th style={{ textAlign: 'right' }}>Audited Figures</th>
+              <th style={{ width: 60, textAlign: 'center' }}>Item</th>
+              <th>Reporting Metric / Description</th>
+              <th style={{ width: 220, textAlign: 'right' }}>Submitted Value</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td>Total Available Guest Rooms</td>
-              <td style={{ textAlign: 'right' }}><strong>{formData.totalRooms || 48}</strong></td>
+              <td style={{ textAlign: 'center', fontWeight: 700 }}>(1)</td>
+              <td>Identification of Accommodation Establishment</td>
+              <td style={{ textAlign: 'right', fontWeight: 600 }}>{aeName}</td>
             </tr>
             <tr>
-              <td>Occupied Room Nights</td>
-              <td style={{ textAlign: 'right' }}><strong>{formData.roomsOccupied || 820}</strong></td>
+              <td style={{ textAlign: 'center', fontWeight: 700 }}>(2)</td>
+              <td>Type of Accommodation-Classification</td>
+              <td style={{ textAlign: 'right', fontWeight: 600 }}>{formData.accommodationType || 'Hotel'}</td>
             </tr>
             <tr>
-              <td>Average Monthly Occupancy Rate</td>
-              <td style={{ textAlign: 'right' }}><strong>{formData.occupancyRate || '74.2%'}</strong></td>
+              <td style={{ textAlign: 'center', fontWeight: 700 }}>(3)</td>
+              <td>Classification Code</td>
+              <td style={{ textAlign: 'right', fontWeight: 600 }}>{formData.classificationCode || 'Standard Class'}</td>
             </tr>
             <tr>
-              <td>Total Overnight Guest Count</td>
-              <td style={{ textAlign: 'right' }}><strong>{Number(item.details?.totalVisitors || 1240).toLocaleString()}</strong></td>
+              <td style={{ textAlign: 'center', fontWeight: 700 }}>(4)</td>
+              <td><strong>Total Available Rooms</strong></td>
+              <td style={{ textAlign: 'right', fontWeight: 700 }}>{Number(formData.availableRooms || 20).toLocaleString()}</td>
+            </tr>
+            <tr style={{ backgroundColor: '#f8fafc' }}>
+              <td style={{ textAlign: 'center', fontWeight: 700 }}>(5)</td>
+              <td><strong>Total Number of Guest Checked-in</strong> <span style={{ fontSize: '11px', color: '#64748b' }}>[(9)+(11)+(13)+(15)]</span></td>
+              <td style={{ textAlign: 'right', fontWeight: 800, color: '#1e40af' }}>{totalGuests.toLocaleString()}</td>
+            </tr>
+            <tr style={{ backgroundColor: '#f8fafc' }}>
+              <td style={{ textAlign: 'center', fontWeight: 700 }}>(6)</td>
+              <td><strong>Total Guest-Nights During the Month</strong> <span style={{ fontSize: '11px', color: '#64748b' }}>[(10)+(12)+(14)+(16)]</span></td>
+              <td style={{ textAlign: 'right', fontWeight: 800, color: '#1e40af' }}>{totalGuestNights.toLocaleString()}</td>
+            </tr>
+            <tr>
+              <td style={{ textAlign: 'center', fontWeight: 700 }}>(7)</td>
+              <td><strong>Total Number of Rooms Occupied During the Month</strong></td>
+              <td style={{ textAlign: 'right', fontWeight: 700 }}>{Number(formData.roomsOccupied || 0).toLocaleString()}</td>
+            </tr>
+            <tr style={{ backgroundColor: '#f0fdf4' }}>
+              <td style={{ textAlign: 'center', fontWeight: 700 }}>(8)</td>
+              <td>
+                <span style={{ fontStyle: 'italic', fontWeight: 700, color: '#15803d' }}>Average Room Occupancy Rate</span>
+                <span style={{ display: 'inline-block', backgroundColor: '#dcfce7', color: '#15803d', fontSize: '10.5px', fontWeight: 800, padding: '2px 7px', borderRadius: '4px', marginLeft: '8px', border: '1px solid #bbf7d0' }}>Performance Indicator **</span>
+              </td>
+              <td style={{ textAlign: 'right', fontWeight: 800, color: '#15803d' }}>
+                {formData.occupancyRate ?? 0}%
+              </td>
+            </tr>
+            <tr>
+              <td style={{ textAlign: 'center', fontWeight: 700 }}>(9)</td>
+              <td>Domestic Guest Arrival</td>
+              <td style={{ textAlign: 'right' }}>{Number(formData.domesticArrival || 0).toLocaleString()}</td>
+            </tr>
+            <tr>
+              <td style={{ textAlign: 'center', fontWeight: 700 }}>(10)</td>
+              <td>Domestic Guest Nights</td>
+              <td style={{ textAlign: 'right' }}>{Number(formData.domesticNights || 0).toLocaleString()}</td>
+            </tr>
+            <tr>
+              <td style={{ textAlign: 'center', fontWeight: 700 }}>(11)</td>
+              <td>Foreign Guest Arrival</td>
+              <td style={{ textAlign: 'right' }}>{Number(formData.foreignArrival || 0).toLocaleString()}</td>
+            </tr>
+            <tr>
+              <td style={{ textAlign: 'center', fontWeight: 700 }}>(12)</td>
+              <td>Foreign Guest Nights</td>
+              <td style={{ textAlign: 'right' }}>{Number(formData.foreignNights || 0).toLocaleString()}</td>
+            </tr>
+            <tr>
+              <td style={{ textAlign: 'center', fontWeight: 700 }}>(13)</td>
+              <td>Overseas Filipinos Arrival</td>
+              <td style={{ textAlign: 'right' }}>{Number(formData.overseasArrival || 0).toLocaleString()}</td>
+            </tr>
+            <tr>
+              <td style={{ textAlign: 'center', fontWeight: 700 }}>(14)</td>
+              <td>Overseas Filipinos Guest Nights</td>
+              <td style={{ textAlign: 'right' }}>{Number(formData.overseasNights || 0).toLocaleString()}</td>
+            </tr>
+            <tr>
+              <td style={{ textAlign: 'center', fontWeight: 700 }}>(15)</td>
+              <td>Unknown/Unspecified Guest Arrival</td>
+              <td style={{ textAlign: 'right' }}>{Number(formData.unknownArrival || 0).toLocaleString()}</td>
+            </tr>
+            <tr>
+              <td style={{ textAlign: 'center', fontWeight: 700 }}>(16)</td>
+              <td>Unknown/Unspecified Guest Nights</td>
+              <td style={{ textAlign: 'right' }}>{Number(formData.unknownNights || 0).toLocaleString()}</td>
+            </tr>
+            <tr style={{ backgroundColor: '#f0fdf4' }}>
+              <td style={{ textAlign: 'center', fontWeight: 700 }}>(17)</td>
+              <td>
+                <span style={{ fontStyle: 'italic', fontWeight: 700, color: '#15803d' }}>Overall Average Length of Stay</span>
+                <span style={{ display: 'inline-block', backgroundColor: '#dcfce7', color: '#15803d', fontSize: '10.5px', fontWeight: 800, padding: '2px 7px', borderRadius: '4px', marginLeft: '8px', border: '1px solid #bbf7d0' }}>Performance Indicator **</span>
+              </td>
+              <td style={{ textAlign: 'right', fontWeight: 800, color: '#15803d' }}>
+                {formData.alos ?? 0} night(s)
+              </td>
+            </tr>
+            <tr style={{ backgroundColor: '#f0fdf4' }}>
+              <td style={{ textAlign: 'center', fontWeight: 700 }}>(18)</td>
+              <td>
+                <span style={{ fontStyle: 'italic', fontWeight: 700, color: '#15803d' }}>Overall Average Persons per Room</span>
+                <span style={{ display: 'inline-block', backgroundColor: '#dcfce7', color: '#15803d', fontSize: '10.5px', fontWeight: 800, padding: '2px 7px', borderRadius: '4px', marginLeft: '8px', border: '1px solid #bbf7d0' }}>Performance Indicator **</span>
+              </td>
+              <td style={{ textAlign: 'right', fontWeight: 800, color: '#15803d' }}>
+                {formData.avgPersonsPerRoom ?? 0}
+              </td>
             </tr>
           </tbody>
         </table>
@@ -698,20 +1055,29 @@ function DAE2DocumentSheet({ item }) {
    DAE 4A Document Sheet
    ========================================================================== */
 function DAE4ADocumentSheet({ item }) {
-  const muni = item.municipality || 'Aritao';
-  const workforce = item.details?.workforceCount || 45;
-  const facilities = item.details?.facilitiesSurveyed || 9;
+  const formData = item.formData || item.details || {};
+  const muni = item.municipality || formData.municipality || 'Bayombong';
+  const attName = formData.attractionName || formData.name || item.sender || 'Tourism Facility';
+  const workforce = Number(formData.workforceCount ?? formData.ecoGuides ?? item.details?.workforceCount ?? 45);
+  const facilities = Number(formData.facilitiesSurveyed ?? formData.units ?? item.details?.facilitiesSurveyed ?? 9);
+  const permanentStaff = Number(formData.permanentStaff ?? 28);
+  const seasonalStaff = Number(formData.seasonalStaff ?? 17);
+  const totalVisitors = Number(formData.totalVisitors ?? formData.visitors ?? item.visitors ?? 0);
 
   return (
     <div className="ofv-container">
       <div className="afv-official-header dae4a-theme">
         <div className="afv-header-badge">DOT FORM DAE 4A</div>
-        <h3>DAE 4A: Accommodation Employment & Capacity Metrics</h3>
-        <p className="afv-header-sub">Workforce, Eco-Guides & Seasonal Hospitality Capacity Report</p>
+        <h3>DAE 4A: Tourist Attraction Employment & Capacity Metrics</h3>
+        <p className="afv-header-sub">Workforce, Eco-Guides & Seasonal Hospitality Capacity Report — {muni}, Nueva Vizcaya</p>
       </div>
 
       <div className="afv-meta-card">
         <div className="afv-meta-grid">
+          <div className="afv-meta-item">
+            <label>Facility Name</label>
+            <div className="afv-readonly-value bold">{attName}</div>
+          </div>
           <div className="afv-meta-item">
             <label>Municipality Origin</label>
             <div className="afv-readonly-value bold">{muni}</div>
@@ -722,7 +1088,7 @@ function DAE4ADocumentSheet({ item }) {
           </div>
           <div className="afv-meta-item">
             <label>Reporting Date</label>
-            <div className="afv-readonly-value">{item.date}</div>
+            <div className="afv-readonly-value">{item.date || 'Current Period'}</div>
           </div>
         </div>
       </div>
@@ -733,8 +1099,16 @@ function DAE4ADocumentSheet({ item }) {
           <span className="afv-kpi-number">{workforce}</span>
         </div>
         <div className="afv-kpi-card blue">
-          <span className="afv-kpi-title">Surveyed Establishments</span>
-          <span className="afv-kpi-number">{facilities}</span>
+          <span className="afv-kpi-title">Permanent Staff</span>
+          <span className="afv-kpi-number">{permanentStaff}</span>
+        </div>
+        <div className="afv-kpi-card orange">
+          <span className="afv-kpi-title">Seasonal Staff</span>
+          <span className="afv-kpi-number">{seasonalStaff}</span>
+        </div>
+        <div className="afv-kpi-card purple">
+          <span className="afv-kpi-title">Total Visitor Volume</span>
+          <span className="afv-kpi-number">{totalVisitors.toLocaleString()}</span>
         </div>
       </div>
     </div>
@@ -745,25 +1119,112 @@ function DAE4ADocumentSheet({ item }) {
    DAE 3B.2 Document Sheet
    ========================================================================== */
 function DAE3B2DocumentSheet({ item }) {
-  const muni = item.municipality || 'Bayombong';
+  const formData = item.formData || item.details || {};
+  const estName = formData.establishmentName || item.sender || 'Accommodation Facility';
+  const muni = item.municipality || formData.municipality || 'Bayombong';
+  const regionData = Array.isArray(formData.regionData) ? formData.regionData : (Array.isArray(formData.rows) ? formData.rows : []);
+  const grandTotal = Number(formData.grandTotal || formData.visitors || item.visitors || 0);
+  const totalGuestNights = Number(formData.totalGuestNights || grandTotal);
+  const alos = formData.averageLengthOfStay || 1;
+  const male = Number(formData.male || formData.maleCount || 0);
+  const female = Number(formData.female || formData.femaleCount || 0);
+
+  const DEFAULT_REGIONS = [
+    { name: 'National Capital Region (NCR)', code: 'NCR' },
+    { name: 'Cordillera Administrative Region (CAR)', code: 'CAR' },
+    { name: 'Region I (Ilocos Region)', code: 'R1' },
+    { name: 'Region II (Cagayan Valley)', code: 'R2' },
+    { name: 'Region III (Central Luzon)', code: 'R3' },
+    { name: 'Region IV-A (CALABARZON)', code: 'R4A' },
+    { name: 'MIMAROPA Region', code: 'R4B' },
+    { name: 'Region V (Bicol Region)', code: 'R5' },
+    { name: 'Region VI (Western Visayas)', code: 'R6' },
+    { name: 'Region VII (Central Visayas)', code: 'R7' },
+    { name: 'Region VIII (Eastern Visayas)', code: 'R8' },
+    { name: 'Region IX (Zamboanga Peninsula)', code: 'R9' },
+    { name: 'Region X (Northern Mindanao)', code: 'R10' },
+    { name: 'Region XI (Davao Region)', code: 'R11' },
+    { name: 'Region XII (SOCCSKSARGEN)', code: 'R12' },
+    { name: 'Region XIII (Caraga)', code: 'R13' },
+    { name: 'Bangsamoro (BARMM)', code: 'BARMM' },
+  ];
+
+  const displayRows = regionData.length > 0 ? regionData : DEFAULT_REGIONS.map((r) => ({
+    region: r.name,
+    travelers: r.code === 'R2' ? grandTotal : 0,
+  }));
+
   return (
     <div className="ofv-container">
-      <div className="afv-official-header dae2-theme">
-        <div className="afv-header-badge">DOT FORM DAE 3B.2</div>
+      <div className="afv-official-header dae3b2-theme">
+        <div className="afv-header-badge">DOT FORM DAE 3B.2 (OVERNIGHT DOMESTIC)</div>
         <h3>DAE 3B.2: Regional Distribution of Overnight Domestic Travelers</h3>
-        <p className="afv-header-sub">Philippine Regional Inflow Log — {muni}, Nueva Vizcaya</p>
+        <p className="afv-header-sub">Philippine Province & City of Residence Compliance Report — {muni}, Nueva Vizcaya</p>
       </div>
 
       <div className="afv-meta-card">
         <div className="afv-meta-grid">
           <div className="afv-meta-item">
-            <label>Origin Municipality</label>
+            <label>Name of AE</label>
+            <div className="afv-readonly-value bold">{estName}</div>
+          </div>
+          <div className="afv-meta-item">
+            <label>Municipality</label>
             <div className="afv-readonly-value bold">{muni}</div>
           </div>
           <div className="afv-meta-item">
-            <label>Province</label>
-            <div className="afv-readonly-value bold">NUEVA VIZCAYA</div>
+            <label>Reporting Period</label>
+            <div className="afv-readonly-value highlight">Month {formData.month || 'Current'} / Year {formData.year || '2026'}</div>
           </div>
+        </div>
+      </div>
+
+      <div className="afv-kpi-grid">
+        <div className="afv-kpi-card green">
+          <span className="afv-kpi-title">Grand Total Domestic</span>
+          <span className="afv-kpi-number">{grandTotal} travelers</span>
+        </div>
+        <div className="afv-kpi-card blue">
+          <span className="afv-kpi-title">Total Guest Nights</span>
+          <span className="afv-kpi-number">{totalGuestNights}</span>
+        </div>
+        <div className="afv-kpi-card purple">
+          <span className="afv-kpi-title">Average Length of Stay</span>
+          <span className="afv-kpi-number">{alos} night(s)</span>
+        </div>
+        <div className="afv-kpi-card orange">
+          <span className="afv-kpi-title">Headcount (M / F)</span>
+          <span className="afv-kpi-number">{male}M / {female}F</span>
+        </div>
+      </div>
+
+      <div className="afv-section-card">
+        <h4>Submitted Regional Distribution</h4>
+        <div className="afv-table-scroll" style={{ maxHeight: '380px' }}>
+          <table className="afv-table">
+            <thead>
+              <tr>
+                <th>Region / Origin Area</th>
+                <th style={{ textAlign: 'right' }}>Recorded Travelers</th>
+              </tr>
+            </thead>
+            <tbody>
+              {displayRows.map((r, idx) => (
+                <tr key={idx}>
+                  <td><strong>{r.region || r.name || 'Philippine Region'}</strong></td>
+                  <td style={{ textAlign: 'right', fontWeight: 700, color: (Number(r.travelers || r.count || 0) > 0 ? '#1e40af' : '#94a3b8') }}>
+                    {Number(r.travelers || r.count || 0).toLocaleString()}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr style={{ background: '#f8fafc', fontWeight: 800 }}>
+                <td>GRAND TOTAL</td>
+                <td style={{ textAlign: 'right', color: '#15803d' }}>{grandTotal.toLocaleString()}</td>
+              </tr>
+            </tfoot>
+          </table>
         </div>
       </div>
     </div>
@@ -774,54 +1235,14 @@ function DAE3B2DocumentSheet({ item }) {
    DOT Document Sheet
    ========================================================================== */
 function DOTDocumentSheet({ item }) {
-  const formData = item.formData || {};
+  const formData = item.formData || item.details || {};
   const estName = formData.establishmentName || item.sender || 'Registered Accommodation';
-  const muni = item.municipality || formData.municipality || '—';
-  const period = formData.reportingPeriod || '2026 Q3';
-  const totalVisitors = item.details?.totalVisitors || formData.totalVisitors || 4;
+  const muni = item.municipality || formData.municipality || 'Bayombong';
+  const period = formData.reportingPeriod || formData.monthYear || item.reportingPeriod || 'Current Period';
 
   return (
     <div className="ofv-container">
-      <div className="afv-official-header dot-theme">
-        <div className="afv-header-badge">DOT REGULATORY STANDARD</div>
-        <h3>ANNUAL / QUARTERLY REPORT FORM — DOT</h3>
-        <p className="afv-header-sub">Department of Tourism Standard Monthly & Daily Guest Logsheet — Certified Record</p>
-      </div>
-
-      <div className="afv-meta-card">
-        <div className="afv-meta-grid">
-          <div className="afv-meta-item">
-            <label>Accommodation Establishment</label>
-            <div className="afv-readonly-value bold">{estName}</div>
-          </div>
-          <div className="afv-meta-item">
-            <label>Municipality</label>
-            <div className="afv-readonly-value bold">{muni}</div>
-          </div>
-          <div className="afv-meta-item">
-            <label>Reporting Period / Quarter</label>
-            <div className="afv-readonly-value highlight">{period}</div>
-          </div>
-        </div>
-      </div>
-
-      <div className="afv-section-card">
-        <h4>Summary of Certified Guest Headcount</h4>
-        <div className="afv-kpi-grid">
-          <div className="afv-kpi-card green">
-            <span className="afv-kpi-title">Grand Total Visitors</span>
-            <span className="afv-kpi-number">{Number(totalVisitors).toLocaleString()}</span>
-          </div>
-          <div className="afv-kpi-card blue">
-            <span className="afv-kpi-title">Reporting Hotels</span>
-            <span className="afv-kpi-number">{item.details?.reportingHotels || 14}</span>
-          </div>
-          <div className="afv-kpi-card orange">
-            <span className="afv-kpi-title">Total Rooms Monitored</span>
-            <span className="afv-kpi-number">{item.details?.totalRooms || 340}</span>
-          </div>
-        </div>
-      </div>
+      <DOTActualFormTable formData={formData} estName={estName} muni={muni} period={period} />
     </div>
   );
 }
@@ -830,29 +1251,116 @@ function DOTDocumentSheet({ item }) {
    CUS Document Sheet
    ========================================================================== */
 function CUSDocumentSheet({ item }) {
-  const muni = item.municipality || 'Bambang';
+  const formData = item.formData || item.details || {};
+  const estName = formData.accommodation || formData.establishmentName || item.sender || 'Accommodation Facility';
+  const muni = item.municipality || formData.municipality || 'Bayombong';
+  const period = formData.reportingPeriod || formData.monthYear || item.reportingPeriod || 'Current Month';
+  const entries = Array.isArray(formData.tourEntries)
+    ? formData.tourEntries
+    : Array.isArray(formData.entries)
+    ? formData.entries
+    : Array.isArray(formData.records)
+    ? formData.records
+    : [];
+  const summary = (typeof formData.summary === 'object' && formData.summary !== null) ? formData.summary : {};
+  const totalGuests = Number(summary.totalGuests || formData.visitors || item.visitors || entries.reduce((s, e) => s + (Number(e.maleCount || 0) + Number(e.femaleCount || 0) || Number(e.visitors || 1)), 0));
+  const foreignCount = Number(summary.foreignCount || entries.filter(e => String(e.typeOfGuest || e.type || '').toLowerCase().includes('foreign')).length);
+
   return (
     <div className="ofv-container">
       <div className="afv-official-header cus-theme">
-        <div className="afv-header-badge">CUSTOMS & TRANSIT TRACKER</div>
-        <h3>CUS Form: Customs & Overseas Tourist Tracking</h3>
-        <p className="afv-header-sub">Foreign Nationalities & Transit Station Registry — {muni}</p>
+        <div className="afv-header-badge">CONVENTION UTILIZATION SURVEY (CUS)</div>
+        <h3>CUS FORM: Convention Utilization Survey</h3>
+        <p className="afv-header-sub">Statistical Report on Tourist / Visitor Arrivals & Event Utilization — {estName} ({muni})</p>
       </div>
 
       <div className="afv-meta-card">
         <div className="afv-meta-grid">
           <div className="afv-meta-item">
+            <label>Accommodation Facility</label>
+            <div className="afv-readonly-value bold">{estName}</div>
+          </div>
+          <div className="afv-meta-item">
             <label>Municipality</label>
             <div className="afv-readonly-value bold">{muni}</div>
           </div>
           <div className="afv-meta-item">
-            <label>Overseas Delegates</label>
-            <div className="afv-readonly-value bold">{item.details?.overseasDelegates || 18} Verified</div>
+            <label>Reporting Period / Month</label>
+            <div className="afv-readonly-value highlight">{period}</div>
           </div>
-          <div className="afv-meta-item">
-            <label>Source Countries</label>
-            <div className="afv-readonly-value highlight">{item.details?.sourceCountries || 'Japan, South Korea, Canada'}</div>
-          </div>
+        </div>
+      </div>
+
+      <div className="afv-kpi-grid">
+        <div className="afv-kpi-card green">
+          <span className="afv-kpi-title">Total Groups / Tours</span>
+          <span className="afv-kpi-number">{entries.length} entries</span>
+        </div>
+        <div className="afv-kpi-card blue">
+          <span className="afv-kpi-title">Total Guests</span>
+          <span className="afv-kpi-number">{totalGuests.toLocaleString()}</span>
+        </div>
+        <div className="afv-kpi-card orange">
+          <span className="afv-kpi-title">Foreign Travelers</span>
+          <span className="afv-kpi-number">{foreignCount.toLocaleString()}</span>
+        </div>
+      </div>
+
+      <div className="afv-section-card">
+        <h4>Submitted CUS Tour & Guest Registry ({entries.length} Records)</h4>
+        <div className="afv-table-scroll">
+          <table className="afv-table">
+            <thead>
+              <tr>
+                <th>Arrival Date</th>
+                <th>Guest / Group Description</th>
+                <th>Origin / Country</th>
+                <th>Type</th>
+                <th>Nights</th>
+                <th>Headcount</th>
+                <th>Purpose</th>
+              </tr>
+            </thead>
+            <tbody>
+              {entries.length > 0 ? (
+                entries.map((ent, idx) => {
+                  if (!ent) return null;
+                  const gType = String(ent.typeOfGuest || ent.type || 'Domestic');
+                  const isFor = gType.toLowerCase().includes('foreign');
+                  const count = (Number(ent.maleCount) || 0) + (Number(ent.femaleCount) || 0) || Number(ent.visitors || 1);
+                  return (
+                    <tr key={idx}>
+                      <td>{ent.date || ent.arrivalDate || '—'}</td>
+                      <td><strong>{ent.description || ent.name || ent.groupName || 'Guest Group'}</strong></td>
+                      <td>{ent.origin || ent.country || 'Philippines'}</td>
+                      <td>
+                        <span className={`afv-badge ${isFor ? 'foreign' : 'domestic'}`} style={{
+                          display: 'inline-block',
+                          padding: '2px 8px',
+                          borderRadius: '10px',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          backgroundColor: isFor ? '#fef3c7' : '#ecfdf5',
+                          color: isFor ? '#b45309' : '#065f46'
+                        }}>
+                          {gType}
+                        </span>
+                      </td>
+                      <td>{ent.noOfDays || ent.stay || ent.nights || '1'} night(s)</td>
+                      <td><strong>{count}</strong></td>
+                      <td>{ent.purpose || 'Leisure / Vacation'}</td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan="7" style={{ textAlign: 'center', color: '#64748b', padding: '16px' }}>
+                    No individual guest logs recorded for this filing.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -888,13 +1396,20 @@ function DefaultDocumentSheet({ item }) {
           <table className="afv-table">
             <tbody>
               {Object.entries(detailsOrData).map(([k, v]) => {
-                if (typeof v === 'object' && v !== null) return null;
+                let displayVal = '';
+                if (Array.isArray(v)) {
+                  displayVal = `${v.length} recorded items`;
+                } else if (typeof v === 'object' && v !== null) {
+                  displayVal = Object.entries(v).map(([subK, subV]) => `${subK}: ${subV}`).join(', ');
+                } else {
+                  displayVal = String(v ?? '—');
+                }
                 return (
                   <tr key={k}>
                     <td style={{ fontWeight: 600, textTransform: 'capitalize', width: '40%' }}>
                       {k.replace(/([A-Z])/g, ' $1')}
                     </td>
-                    <td style={{ fontWeight: 700, color: '#0f172a' }}>{String(v)}</td>
+                    <td style={{ fontWeight: 700, color: '#0f172a' }}>{displayVal}</td>
                   </tr>
                 );
               })}
@@ -905,7 +1420,6 @@ function DefaultDocumentSheet({ item }) {
     </div>
   );
 }
-
 /* ==========================================================================
    FORM A Document Sheet (AE DAE-1B by Country)
    ========================================================================== */
@@ -1024,6 +1538,7 @@ function FormADocumentSheet({ item }) {
   );
 }
 
+
 /* ==========================================================================
    Check-In Document Sheet
    ========================================================================== */
@@ -1032,6 +1547,12 @@ function CheckInDocumentSheet({ item }) {
   const guestName = formData.guestName || formData.name || formData.leadGuest || item.sender || 'Guest Record';
   const totalVisitors = Number(formData.totalVisitors || formData.visitors || 1);
   const stayType = formData.stayType || (formData.isOvernight ? 'Overnight' : 'Day Tour');
+  const country = formData.country || 'Philippines';
+  const origin = [formData.cityOrState || formData.city, formData.province, country].filter(Boolean).join(', ');
+  const male = formData.maleCount ?? 1;
+  const female = formData.femaleCount ?? 0;
+  const purpose = formData.purpose || 'Leisure / Vacation';
+  const arrivalDate = formData.arrivalDate || formData.checkInDate || formData.date || item.date || 'Today';
 
   return (
     <div className="ofv-container">
@@ -1052,15 +1573,40 @@ function CheckInDocumentSheet({ item }) {
             <div className="afv-readonly-value bold" style={{ color: '#0284c7' }}>{totalVisitors}</div>
           </div>
           <div className="afv-meta-item">
+            <label>Residence / Origin</label>
+            <div className="afv-readonly-value">{origin}</div>
+          </div>
+          <div className="afv-meta-item">
             <label>Stay Type</label>
             <div className="afv-readonly-value highlight">{stayType}</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="afv-section-card">
+        <h4>Arrival Demographics</h4>
+        <div className="afv-kpi-grid">
+          <div className="afv-kpi-card green">
+            <span className="afv-kpi-title">Male Headcount</span>
+            <span className="afv-kpi-number">{male}</span>
+          </div>
+          <div className="afv-kpi-card blue">
+            <span className="afv-kpi-title">Female Headcount</span>
+            <span className="afv-kpi-number">{female}</span>
+          </div>
+          <div className="afv-kpi-card purple">
+            <span className="afv-kpi-title">Visit Purpose</span>
+            <span className="afv-kpi-number" style={{ fontSize: '15px' }}>{purpose}</span>
+          </div>
+          <div className="afv-kpi-card orange">
+            <span className="afv-kpi-title">Arrival Date</span>
+            <span className="afv-kpi-number" style={{ fontSize: '15px' }}>{arrivalDate}</span>
           </div>
         </div>
       </div>
     </div>
   );
 }
-
 /* ==========================================================================
    Holiday & Peak Season Document Sheet
    ========================================================================== */
