@@ -324,12 +324,8 @@ app.get("/api/reports/visitor-analytics", async (req, res) => {
           m.foreign = 17;
           m.overnight = 5592;
           m.total = 5592;
-        } else if (idx === 10) { // November
-          m.domestic = 0;
-          m.foreign = 0;
-          m.overnight = 0;
-          m.total = 0;
         }
+        // November and other months preserve live arrivals from check-ins and monthly filings
       });
     }
 
