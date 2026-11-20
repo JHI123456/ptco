@@ -62,6 +62,11 @@ export default function OfficialFormViewer({ item }) {
     return <CUSDocumentSheet item={item} />;
   }
 
+  // 7.5 HOLIDAY FORM RENDERER
+  if (fType.includes('HOLIDAY') || fType.includes('PEAK OCCASION')) {
+    return <HolidayDocumentSheet item={item} />;
+  }
+
   // 8. VISITOR CHECK-IN RENDERER
   if (fType.includes('CHECK-IN') || fType.includes('CHECKIN') || fType.includes('CHECK IN')) {
     return <CheckInDocumentSheet item={item} />;
@@ -1051,6 +1056,94 @@ function CheckInDocumentSheet({ item }) {
             <div className="afv-readonly-value highlight">{stayType}</div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* ==========================================================================
+   Holiday & Peak Season Document Sheet
+   ========================================================================== */
+function HolidayDocumentSheet({ item }) {
+  const formData = item.formData || item.details || {};
+  const estName = formData.establishmentName || item.sender || 'Accommodation Facility';
+  const muni = formData.municipality || item.municipality || 'Bayombong';
+  const holidayType = formData.holidayType || 'National / Special Holidays';
+  const yearPeriod = formData.yearPeriod || formData.year || '2026';
+  const totalParticipants = Number(formData.totalParticipants ?? formData.visitors ?? formData.holidayTotal ?? 0);
+  const occasions = Array.isArray(formData.occasions) ? formData.occasions : [];
+
+  return (
+    <div className="ofv-container">
+      <div className="afv-official-header holiday-theme">
+        <div className="afv-header-badge">PEAK OCCASIONS & HOLIDAY TRACKER</div>
+        <h3>Special Holiday & Peak Season Visitor Volume Log</h3>
+        <p className="afv-header-sub">Holiday Activities & Temporary Tourist Statistics — {estName} ({muni}, Nueva Vizcaya)</p>
+      </div>
+
+      <div className="afv-meta-card">
+        <div className="afv-meta-grid">
+          <div className="afv-meta-item">
+            <label>Accommodation Establishment</label>
+            <div className="afv-readonly-value bold">{estName}</div>
+          </div>
+          <div className="afv-meta-item">
+            <label>Municipality</label>
+            <div className="afv-readonly-value">{muni}</div>
+          </div>
+          <div className="afv-meta-item">
+            <label>Holiday Category</label>
+            <div className="afv-readonly-value">{holidayType}</div>
+          </div>
+          <div className="afv-meta-item">
+            <label>Reporting Period</label>
+            <div className="afv-readonly-value">{yearPeriod}</div>
+          </div>
+          <div className="afv-meta-item">
+            <label>Total Holiday Visitors</label>
+            <div className="afv-readonly-value highlight">{totalParticipants.toLocaleString()} guests</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="afv-section-card">
+        <h4>Summary of Recorded Tourist Arrivals / Occasions</h4>
+        {occasions.length > 0 ? (
+          <table className="afv-table" style={{ width: '100%', borderCollapse: 'collapse', marginTop: '8px' }}>
+            <thead>
+              <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0', textAlign: 'left' }}>
+                <th style={{ padding: '8px' }}>Occasion Type</th>
+                <th style={{ padding: '8px' }}>Title / Event</th>
+                <th style={{ padding: '8px' }}>Place / Venue</th>
+                <th style={{ padding: '8px', textAlign: 'right' }}>Participants</th>
+                <th style={{ padding: '8px' }}>Dates</th>
+                <th style={{ padding: '8px' }}>Trend</th>
+              </tr>
+            </thead>
+            <tbody>
+              {occasions.map((o, idx) => (
+                <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  <td style={{ padding: '8px' }}>
+                    <span style={{ background: '#ecfdf5', color: '#065f46', padding: '2px 8px', borderRadius: '10px', fontSize: '11px', fontWeight: 600 }}>
+                      {o.occasion || 'Holiday'}
+                    </span>
+                  </td>
+                  <td style={{ padding: '8px', fontWeight: 700, color: '#0f172a' }}>{o.title}</td>
+                  <td style={{ padding: '8px', color: '#475569' }}>{o.place}</td>
+                  <td style={{ padding: '8px', textAlign: 'right', fontWeight: 700, color: '#059669' }}>
+                    {(Number(o.participants ?? o.baseParticipants) || 0).toLocaleString()}
+                  </td>
+                  <td style={{ padding: '8px', fontSize: '12px', color: '#64748b' }}>
+                    {o.startDate && o.endDate ? `${o.startDate} — ${o.endDate}` : (o.startDate || '—')}
+                  </td>
+                  <td style={{ padding: '8px', fontSize: '12px' }}>{o.trend || 'Steady'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <p style={{ color: '#64748b', fontStyle: 'italic', padding: '12px 0' }}>No breakdown of occasions attached.</p>
+        )}
       </div>
     </div>
   );
