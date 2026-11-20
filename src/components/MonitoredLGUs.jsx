@@ -569,18 +569,12 @@
                   <p className="lgu-quote">{lgu.quote}</p>
                 </div>
 
-                {/* 2-Metric Box: Both at 0 */}
+                {/* Metric Box */}
                 <div className="lgu-stats-box">
                   <div className="lgu-stat-col">
                     <span className="lgu-stat-sub">TOTAL VISITORS</span>
                     <strong className="lgu-stat-val">
                       {metrics.totalVisitors.toLocaleString()}
-                    </strong>
-                  </div>
-                  <div className="lgu-stat-col right-col">
-                    <span className="lgu-stat-sub">FOREIGN / MICE</span>
-                    <strong className="lgu-stat-val teal-val">
-                      {metrics.foreignMice.toLocaleString()}
                     </strong>
                   </div>
                 </div>
